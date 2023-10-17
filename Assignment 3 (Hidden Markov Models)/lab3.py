@@ -145,6 +145,7 @@ def find_new_pi(gamma_list, pi):
 
 
 def find_new_A(xi_list):
+    #TODO.x
     xis = np.array(xi_list)
     return
 
@@ -173,18 +174,26 @@ def find_new_sigma(gamma_list, x_list, mu):
     xs = np.array(x_list)
 
     # Find xn - muk -> (Obs, N) - (k) => (Obs, N, K)
+    diff_transpose = xs[:,:,np.newaxis] - mu
 
     # Find the transpose of this (Obs, K, N)
+    diff = np.transpose(diff_transpose, (0,2,1))
 
     # Multiply ( Obs, K, N) * (Obs, N, K) => (Obs, K, K)
+    mul_diff = np.matmul(diff, diff_transpose)
 
-    # In the numerator multiply gamma with this product (Obs, N, k ) * ( Obs, k,k) => (Obs, N,K)
-
+    # In the numerator multiply gamma with this product (Obs, N, k ) * ( Obs, k, k) => (Obs, N,K)
+    sigma_num = np.matmul(gammas, mul_diff)
     # for the numerator sum across axis 1 (N) first and then axis 0 (Obs) next => (k)
+    sigma_num = np.sum(sigma_num, axis=1)
+    sigma_num = np.sum(sigma_num, axis=0)
 
     # in the denominator do the similar thing
+    sigma_denom = np.sum(gammas, axis=1)
+    sigma_denom = np.sum(sigma_denom, axis=0)
 
     #find the ratio and return it
+    return sigma_num/sigma_denom
 
 
 
