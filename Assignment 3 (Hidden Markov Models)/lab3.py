@@ -117,8 +117,8 @@ def m_step(x_list, gamma_list, xi_list):
     # 1. Finding new pi
     pi = find_new_pi(gamma_list, pi)
 
-    # TODO.2. Finding new A
-    # A = find_new_A(xi_list)
+    # 2. Finding new A
+    A = find_new_A(xi_list, A)
 
     # 3. Finding new mu
     phi["mu"] = find_new_mu(gamma_list, x_list)
@@ -144,10 +144,30 @@ def find_new_pi(gamma_list, pi):
     return pi
 
 
-def find_new_A(xi_list):
-    #TODO.x
+def find_new_A(xi_list, A):
+    '''
+    Fill the Ajk values one by one
+
+    @param xi_list:
+    @param A:
+    @return:
+    '''
     xis = np.array(xi_list)
-    return
+    num_states = A.shape[0]
+
+    # Find each Ajk value first and populate the A array
+    for j in range(num_states):
+        for k in range(num_states):
+            # A[j][k] = ?
+            j_k_selection = xis[:, :, j, k]
+            sum_across_timesteps = np.sum(j_k_selection, axis = 1)
+            sum_across_observations = np.sum(sum_across_timesteps)
+            A[j,k] = sum_across_observations
+
+    # Normalize each Ajk value with the sum of all values in the A array
+    A /= np.sum(A)
+
+    return A
 
 
 def find_new_mu(gamma_list, x_list):
@@ -174,10 +194,10 @@ def find_new_sigma(gamma_list, x_list, mu):
     xs = np.array(x_list)
 
     # Find xn - muk -> (Obs, N) - (k) => (Obs, N, K)
-    diff_transpose = xs[:,:,np.newaxis] - mu
+    diff_transpose = xs[:, :, np.newaxis] - mu
 
     # Find the transpose of this (Obs, K, N)
-    diff = np.transpose(diff_transpose, (0,2,1))
+    diff = np.transpose(diff_transpose, (0, 2, 1))
 
     # Multiply ( Obs, K, N) * (Obs, N, K) => (Obs, K, K)
     mul_diff = np.matmul(diff, diff_transpose)
@@ -192,9 +212,8 @@ def find_new_sigma(gamma_list, x_list, mu):
     sigma_denom = np.sum(gammas, axis=1)
     sigma_denom = np.sum(sigma_denom, axis=0)
 
-    #find the ratio and return it
-    return sigma_num/sigma_denom
-
+    # find the ratio and return it
+    return sigma_num / sigma_denom
 
 
 """Putting them together"""
