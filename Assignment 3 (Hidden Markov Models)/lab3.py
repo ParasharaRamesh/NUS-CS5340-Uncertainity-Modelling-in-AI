@@ -80,6 +80,7 @@ def e_step(x_list, pi, A, phi):
 
     # TODO.4 calculate spring
 
+    # TODO.5 gamma should be (obs, N, k) and xi should be (obs, N-1, k,k)
     return gamma_list, xi_list
 
 
