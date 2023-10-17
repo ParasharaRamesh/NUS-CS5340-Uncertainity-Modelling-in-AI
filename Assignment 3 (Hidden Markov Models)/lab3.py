@@ -1,9 +1,9 @@
 """ CS5340 Lab 3: Hidden Markov Models
 See accompanying PDF for instructions.
 
-Name: <Your Name here>
-Email: <username>@u.nus.edu
-Student ID: A0123456X
+Name: Parashara Ramesh
+Email: e1216292@u.nus.edu
+Student ID: A0285647M
 """
 import numpy as np
 import scipy.stats
@@ -42,6 +42,8 @@ def initialize(n_states, x):
 
 
 """E-step"""
+
+
 def e_step(x_list, pi, A, phi):
     """ E-step: Compute posterior distribution of the latent variables,
     p(Z|X, theta_old). Specifically, we compute
@@ -60,18 +62,30 @@ def e_step(x_list, pi, A, phi):
     """
     n_states = pi.shape[0]
     gamma_list = [np.zeros([len(x), n_states]) for x in x_list]
-    xi_list = [np.zeros([len(x)-1, n_states, n_states]) for x in x_list]
+    xi_list = [np.zeros([len(x) - 1, n_states, n_states]) for x in x_list]
 
     """ YOUR CODE HERE
     Use the forward-backward procedure on each input sequence to populate 
     "gamma_list" and "xi_list" with the correct values.
     Be sure to use the scaling factor for numerical stability.
     """
+    # TODO.1 calculate scaled alpha
+    # TODO.1.1 using recursion find out all the alpha tildes and store it somewhere
+
+    # TODO.1.2 using each alpha tilde at timstep 'n' compute cn and store that also
+
+    # TODO.2 calculate scaled beta using recursion and the cn array
+
+    # TODO.3 calculate gamma
+
+    # TODO.4 calculate spring
 
     return gamma_list, xi_list
 
 
 """M-step"""
+
+
 def m_step(x_list, gamma_list, xi_list):
     """M-step of Baum-Welch: Maximises the log complete-data likelihood for
     Gaussian HMMs.
@@ -99,11 +113,20 @@ def m_step(x_list, gamma_list, xi_list):
     """ YOUR CODE HERE
     Compute the complete-data maximum likelihood estimates for pi, A, phi.
     """
+    # TODO.x refer to slide #31 onwards
+
+    # TODO.1 find new pi
+
+    # TODO.2 find new A
+
+    # TODO.3 find new mu, Sigma -> new phi
 
     return pi, A, phi
 
 
 """Putting them together"""
+
+
 def fit_hmm(x_list, n_states):
     """Fit HMM parameters to observed data using Baum-Welch algorithm
 
@@ -128,5 +151,20 @@ def fit_hmm(x_list, n_states):
     """ YOUR CODE HERE
      Populate the values of pi, A, phi with the correct values. 
     """
+    threshold = 1e-4
+
+    while True:
+        gamma_list, xi_list = e_step(x_list, pi, A, phi)
+        pi_new, A_new, phi_new = m_step(x_list, gamma_list, xi_list)
+
+        has_pi_converged = np.all(np.isclose(pi, pi_new, threshold))
+        has_A_converged = np.all(np.isclose(A, A_new, threshold))
+        has_phi_mu_converged = np.all(np.isclose(phi["mu"], phi_new["mu"], threshold))
+        has_phi_sigma_converged = np.all(np.isclose(phi["sigma"], phi_new["sigma"], threshold))
+
+        pi, A, phi = pi_new, A_new, phi_new
+
+        if has_pi_converged and has_A_converged and has_phi_mu_converged and has_phi_sigma_converged:
+            break
 
     return pi, A, phi
