@@ -89,7 +89,7 @@ def e_step(x_list, pi, A, phi):
 def m_step(x_list, gamma_list, xi_list):
     """M-step of Baum-Welch: Maximises the log complete-data likelihood for
     Gaussian HMMs.
-    
+
     Args:
         x_list (List[np.ndarray]): List of sequences of observed measurements
         gamma_list (List[np.ndarray]): Marginal posterior distribution
@@ -113,15 +113,79 @@ def m_step(x_list, gamma_list, xi_list):
     """ YOUR CODE HERE
     Compute the complete-data maximum likelihood estimates for pi, A, phi.
     """
-    # TODO.x refer to slide #31 onwards
 
-    # TODO.1 find new pi
+    # 1. Finding new pi
+    pi = find_new_pi(gamma_list, pi)
 
-    # TODO.2 find new A
+    # TODO.2. Finding new A
+    # A = find_new_A(xi_list)
 
-    # TODO.3 find new mu, Sigma -> new phi
+    # 3. Finding new mu
+    phi["mu"] = find_new_mu(gamma_list, x_list)
+
+    # 4. Finding new sigma
+    phi["sigma"] = find_new_sigma(gamma_list, x_list, phi["mu"])
 
     return pi, A, phi
+
+
+""" Functions for calculating each new parameter"""
+
+
+def find_new_pi(gamma_list, pi):
+    # Getting (Obs, N, k) -> (Obs, k) ( picking it for the N = 1)
+    gamma_1s = np.vstack([gamma_obs[0] for gamma_obs in gamma_list])
+    # Numerator: Adding across all observations to get from (Obs, k) -> (k)
+    pi_num = np.sum(gamma_1s, axis=0)
+    # Denominator: Summing across the k to get the normalizer
+    pi_denom = np.sum(pi_num, axis=0)
+    # Computing pi
+    pi = pi_num / pi_denom
+    return pi
+
+
+def find_new_A(xi_list):
+    xis = np.array(xi_list)
+    return
+
+
+def find_new_mu(gamma_list, x_list):
+    gammas = np.array(gamma_list)
+    # a. Finding Denominator
+    # Find sum across all time steps (Obs, N, k) -> (Obs, k)
+    mu_denom = np.sum(gammas, axis=1)
+    # Do this across all observations (Obs, k) -> (k)
+    mu_denom = np.sum(mu_denom, axis=0)
+    # b. Finding Numerator
+    xs = np.array(x_list)
+    # find the product with each x i.e. (Obs, N, k) x (Obs,N,1) -> (Obs, N, K) {the 1 is added using np.newaxis}
+    mu_num = gammas * xs[:, :, np.newaxis]
+    # Do summation over all timesteps to get from (Obs, N, K) -> (Obs, K)
+    mu_num = np.sum(mu_num, axis=1)
+    # Do summation over all observations to get from (Obs, K) -> (K)
+    mu_num = np.sum(mu_num, axis=0)
+    # c. finding mu
+    return mu_num / mu_denom
+
+
+def find_new_sigma(gamma_list, x_list, mu):
+    gammas = np.array(gamma_list)
+    xs = np.array(x_list)
+
+    # Find xn - muk -> (Obs, N) - (k) => (Obs, N, K)
+
+    # Find the transpose of this (Obs, K, N)
+
+    # Multiply ( Obs, K, N) * (Obs, N, K) => (Obs, K, K)
+
+    # In the numerator multiply gamma with this product (Obs, N, k ) * ( Obs, k,k) => (Obs, N,K)
+
+    # for the numerator sum across axis 1 (N) first and then axis 0 (Obs) next => (k)
+
+    # in the denominator do the similar thing
+
+    #find the ratio and return it
+
 
 
 """Putting them together"""
