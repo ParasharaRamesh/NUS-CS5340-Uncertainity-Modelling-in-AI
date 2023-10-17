@@ -158,10 +158,16 @@ def find_new_A(xi_list, A):
     # Find each Ajk value first and populate the A array
     for j in range(num_states):
         for k in range(num_states):
-            # A[j][k] = ?
+            # select the jth and kth values across all observations across all time steps
             j_k_selection = xis[:, :, j, k]
+
+            # sum across time steps
             sum_across_timesteps = np.sum(j_k_selection, axis = 1)
+
+            #sum across number of observations
             sum_across_observations = np.sum(sum_across_timesteps)
+
+            #populate the value in the matrix
             A[j,k] = sum_across_observations
 
     # Normalize each Ajk value with the sum of all values in the A array
