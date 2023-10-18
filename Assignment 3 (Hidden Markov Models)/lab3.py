@@ -220,105 +220,39 @@ def find_new_sigma(gamma_list, x_list, mu):
     N = xs.shape[1]
     K = mu.shape[0]
 
-    sigma = np.zeros((K))
+    mu = mu[np.newaxis, :]
 
-    #denominator
-    denom = np.sum(gammas, axis=1)
-    denom = np.sum(denom, axis=0)
-
+    all_sigmas_across_obs = []
     #finding numerator
-    for k in range(K):
-        num_across_obs = 0
-        for o in range(O):
-            num_across_N = 0
-            for n in range(N):
-                granular_gamma = gammas[o,n,k]
-                x_n = xs[o, n]
-                mu_k = mu[k]
-                diff = x_n - mu_k
-                diff_transpose = diff.T
-                granular_product = granular_gamma * diff * diff_transpose
-                num_across_N += granular_product
-            num_across_obs += num_across_N
-        sigma[k] = num_across_obs
+    for o in range(O):
+        #TODO.x can you think array wise here instead of element wise?
+        gamma_across_N = gammas[o] # of shape (N, K)
+        x_n = xs[o] # of shape N
+
+        #TODO.x need to find out the difference to get a N,K again
+        x_n = x_n[:, np.newaxis]
+        diff = x_n - mu
+        dot_product = np.sum(diff * diff)
+
+        #TODO.x dot product with itself is same as matrix multipliation with transpose!
+        granular_product = gamma_across_N * dot_product
+
+        sigma_for_obs_num = np.sum(granular_product, axis=0)
+        sigma_for_obs_denom = np.sum(gamma_across_N, axis=0)
+
+        sigma_for_obs = sigma_for_obs_num/sigma_for_obs_denom
+        all_sigmas_across_obs.append(sigma_for_obs)
 
     #finding sigma
-    sigma = sigma/denom
+    all_sigmas_across_obs = np.array(all_sigmas_across_obs)
 
+    #avg sigma across all observations
+    sigma = np.sum(all_sigmas_across_obs, axis=0)/O
+
+    #TODO.x should be around [0.51288048 0.20810693 0.2954764 ]
     return sigma
-
-
-#TODO.x wrong
-def find_new_sigma_old(gamma_list, x_list, mu):
-    gammas = np.array(gamma_list)
-    xs = np.array(x_list)
-
-    N = xs.shape[1]
-    K = mu.shape[0]
-
-    '''
-    TODO.x
-    
-    Numerator:
-    obscollector = []
-    for every obs:
-        timecollector = []
-        for every timestep n:
-            z will be size 3
-            x will be 1 value - mu of size 3 -> something of size 3 -> dot with its transpose to get 1 value (v)
-            v x z -> output of size 3
-            add to timecollector
-        now timecollector wil have N, k -> squish this to get k
-        add this to obs collector
-    squish across obs collector  to get k ( this is the numerator)
-    
-    Denominator:
-    200,8,3 (squish 8 i.e N)-> 200,3 (squish across obs)-> 3
-    
-    array of 3/ array of 3 -> sigma of 3
-    
-    '''
-    gamma_product_sum_across_obs = []
-    for x_obs, gammas_obs in zip(xs, gammas):
-        #Shape of x_obs is N, shape of gammas is N,k
-        gamma_product_sum_across_timesteps = np.zeros((K))
-        for x_n, gamma_n in zip(x_obs, gammas_obs):
-            #shape of x_n is 1, shape of gammas is K
-            diff = x_n - mu
-            diff_transpose = diff.T
-
-            gamma_product = gamma_n * diff
-            # gamma_product =
-            #take dot product
-            dot_product = np.dot(diff, diff_transpose)
-
-            #take product with gamma
-            gamma_product = gamma_n * dot_product
-
-            #take sum across all timesteps
-            gamma_product_sum_across_timesteps += gamma_product
-        gamma_product_sum_across_obs.append(gamma_product_sum_across_timesteps)
-
-    #Numerator
-    gamma_product_sum_across_obs = np.array(gamma_product_sum_across_obs)
-    sigma_num = np.sum(gamma_product_sum_across_obs, axis=0)
-
-    #Denominator
-    sigma_denom = np.sum(gammas, axis = 1)
-    sigma_denom = np.sum(sigma_denom, axis = 0)
-
-    sigma = sigma_num/sigma_denom
-
-    return sigma
-
-
-
-
-
-
 
 """Putting them together"""
-
 
 def fit_hmm(x_list, n_states):
     """Fit HMM parameters to observed data using Baum-Welch algorithm

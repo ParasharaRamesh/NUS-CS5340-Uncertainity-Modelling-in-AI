@@ -60,15 +60,13 @@ def test_m_step():
         x_list = list(npzfile['x'])
         gamma_list = list(npzfile['gamma_list'])
         xi_list = list(npzfile['xi_list'])
+        sigma_ = npzfile['test_m_step_sigma']
+        A_ = npzfile['test_m_step_A']
 
         pi, A, phi = m_step(x_list, gamma_list, xi_list)
 
-        sigma_ = npzfile['test_m_step_sigma']
         assert np.allclose(phi['sigma'], sigma_), 'sigma is incorrect'
-
-        A_ = npzfile['test_m_step_A']
         assert np.allclose(A, A_), 'A is incorrect'
-
         assert np.allclose(pi, npzfile['test_m_step_pi']), 'pi is incorrect'
         assert np.allclose(phi['mu'], npzfile['test_m_step_mu']), 'mu is incorrect'
 
