@@ -63,13 +63,15 @@ def test_m_step():
 
         pi, A, phi = m_step(x_list, gamma_list, xi_list)
 
-        assert np.allclose(pi, npzfile['test_m_step_pi']), 'pi is incorrect'
-        assert np.allclose(phi['mu'], npzfile['test_m_step_mu']), \
-            'mu is incorrect'
         sigma_ = npzfile['test_m_step_sigma']
-        A_ = npzfile['test_m_step_A']
         assert np.allclose(phi['sigma'], sigma_), 'sigma is incorrect'
+
+        A_ = npzfile['test_m_step_A']
         assert np.allclose(A, A_), 'A is incorrect'
+
+        assert np.allclose(pi, npzfile['test_m_step_pi']), 'pi is incorrect'
+        assert np.allclose(phi['mu'], npzfile['test_m_step_mu']), 'mu is incorrect'
+
 
 
 def run_fit_hmm():

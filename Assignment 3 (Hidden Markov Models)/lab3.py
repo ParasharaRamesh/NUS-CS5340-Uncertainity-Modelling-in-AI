@@ -43,6 +43,12 @@ def initialize(n_states, x):
 
 """E-step"""
 
+def calculate_alphas_and_c(x_list, pi, phi, A):
+    xs = np.array(x_list)
+    mu = phi["mu"]
+    sigma = phi["sigma"]
+    return
+
 
 def e_step(x_list, pi, A, phi):
     """ E-step: Compute posterior distribution of the latent variables,
@@ -69,18 +75,21 @@ def e_step(x_list, pi, A, phi):
     "gamma_list" and "xi_list" with the correct values.
     Be sure to use the scaling factor for numerical stability.
     """
-    # TODO.1 calculate scaled alpha
-    # TODO.1.1 using recursion find out all the alpha tildes and store it somewhere
+    # 1. calculate scaled alpha
+    alphas, c_n = calculate_alphas_and_c(x_list, pi, phi, A)
 
-    # TODO.1.2 using each alpha tilde at timstep 'n' compute cn and store that also
+    # alphas_hat = calculate_scaled_alphas(alphas, c_n)
 
-    # TODO.2 calculate scaled beta using recursion and the cn array
 
-    # TODO.3 calculate gamma
+    # 2.  calculate scaled beta
+    # betas_hat = calculate_scaled_betas(x_list, pi, phi, A, c_n)
 
-    # TODO.4 calculate spring
+    # 3. calculate gamma
+    # gamma_list = calculate_gamma(alphas_hat, betas_hat)
 
-    # TODO.5 gamma should be (obs, N, k) and xi should be (obs, N-1, k,k)
+    # 4 calculate xi_list
+    # xi_list = calculate_spring(alphas_hat, betas_hat, c_n, pi, phi, A)
+
     return gamma_list, xi_list
 
 
@@ -166,7 +175,6 @@ def find_new_mu(gamma_list, x_list):
     return mu_num / mu_denom
 
 
-#TODO.x wrong
 def find_new_A(xi_list, A):
     '''
     Fill the Ajk values one by one
@@ -176,56 +184,77 @@ def find_new_A(xi_list, A):
     @return:
     '''
 
-    '''
-    TODO.x
-    
-    Numerator:
-    we have spring which is 200,7,3,3 
-    
-    for each obs:
-        obs_collector = []
-        for each time window (of size 2):
-            we have a 3x3...
-            element wise sum across all of time ( i.e cell wise addition)
-        we will have a 3X3 at this point in time ( add this to obs collector)
-    obs collector will now have 200, 3,3 ( N, k ,k ) -> squish the 200 and get one final 3x3
-    
-    Denominator:
-    take this final 3x3 and squish across column to get 3x1
-    
-    Now do a column wise division 3x3/ 3x1 (columnar division) -> we should still get a 3x3 which will be the new A (k x k)
-    
-    '''
-
-
     xis = np.array(xi_list)
-    num_states = A.shape[0]
+    K = A.shape[0]
+    O = xis.shape[0]
+    N = xis.shape[1] + 1
 
-    # Find each Ajk value first and populate the A array
-    for j in range(num_states):
-        for k in range(num_states):
-            # select the jth and kth values across all observations across all time steps
-            j_k_selection = xis[:, :, j, k]
+    xi_n_sums_per_obs = []
+    for xi_obs in xis: # Shape (Obs, N-1 , K, K)
+        #xi_obs is Shape (N-1 , K, K)
+        xi_n_sum_per_obs = np.zeros((K,K))
+        for xi_n in xi_obs:
+            # xi_n is Shape (K, K)
+            xi_n_sum_per_obs += xi_n
+        xi_n_sums_per_obs.append(xi_n_sum_per_obs)
+    xi_n_sums_per_obs = np.array(xi_n_sums_per_obs)
 
-            # sum across time steps
-            sum_across_timesteps = np.sum(j_k_selection, axis = 1)
+    #Numerator
+    A_num = np.sum(xi_n_sums_per_obs, axis=0)
 
-            #sum across number of observations
-            sum_across_observations = np.sum(sum_across_timesteps)
+    #Denominator
+    A_denom = np.sum(A_num, axis=1)
+    A_denom = A_denom[:, np.newaxis]
 
-            #populate the value in the matrix
-            A[j,k] = sum_across_observations
-
-    # Normalize each Ajk value with the sum of all values in the A array
-    A /= np.sum(A)
+    #Compute A
+    A = A_num/A_denom
 
     return A
 
 
-#TODO.x wrong
 def find_new_sigma(gamma_list, x_list, mu):
     gammas = np.array(gamma_list)
     xs = np.array(x_list)
+
+    O = xs.shape[0]
+    N = xs.shape[1]
+    K = mu.shape[0]
+
+    sigma = np.zeros((K))
+
+    #denominator
+    denom = np.sum(gammas, axis=1)
+    denom = np.sum(denom, axis=0)
+
+    #finding numerator
+    for k in range(K):
+        num_across_obs = 0
+        for o in range(O):
+            num_across_N = 0
+            for n in range(N):
+                granular_gamma = gammas[o,n,k]
+                x_n = xs[o, n]
+                mu_k = mu[k]
+                diff = x_n - mu_k
+                diff_transpose = diff.T
+                granular_product = granular_gamma * diff * diff_transpose
+                num_across_N += granular_product
+            num_across_obs += num_across_N
+        sigma[k] = num_across_obs
+
+    #finding sigma
+    sigma = sigma/denom
+
+    return sigma
+
+
+#TODO.x wrong
+def find_new_sigma_old(gamma_list, x_list, mu):
+    gammas = np.array(gamma_list)
+    xs = np.array(x_list)
+
+    N = xs.shape[1]
+    K = mu.shape[0]
 
     '''
     TODO.x
@@ -249,31 +278,43 @@ def find_new_sigma(gamma_list, x_list, mu):
     array of 3/ array of 3 -> sigma of 3
     
     '''
+    gamma_product_sum_across_obs = []
+    for x_obs, gammas_obs in zip(xs, gammas):
+        #Shape of x_obs is N, shape of gammas is N,k
+        gamma_product_sum_across_timesteps = np.zeros((K))
+        for x_n, gamma_n in zip(x_obs, gammas_obs):
+            #shape of x_n is 1, shape of gammas is K
+            diff = x_n - mu
+            diff_transpose = diff.T
 
-    # Find xn - muk -> (Obs, N) - (k) => (Obs, N, K)
-    diff = xs[:, :, np.newaxis] - mu
+            gamma_product = gamma_n * diff
+            # gamma_product =
+            #take dot product
+            dot_product = np.dot(diff, diff_transpose)
 
-    # Find the transpose of this (Obs, K, N)
-    diff_transpose = np.transpose(diff, (0, 2, 1))
+            #take product with gamma
+            gamma_product = gamma_n * dot_product
 
-    # Multiply ( Obs, N, k) * (Obs, k, N) => (Obs, N, N)
-    mul_diff = np.matmul(diff, diff_transpose)
+            #take sum across all timesteps
+            gamma_product_sum_across_timesteps += gamma_product
+        gamma_product_sum_across_obs.append(gamma_product_sum_across_timesteps)
 
-    # In the numerator multiply gamma with this product (Obs, N, k ) * ( Obs, k, k) => (Obs, N,K)
-    sigma_num = np.matmul(gammas, mul_diff)
-    # for the numerator sum across axis 1 (N) first and then axis 0 (Obs) next => (k)
-    sigma_num = np.sum(sigma_num, axis=1)
-    sigma_num = np.sum(sigma_num, axis=0)
+    #Numerator
+    gamma_product_sum_across_obs = np.array(gamma_product_sum_across_obs)
+    sigma_num = np.sum(gamma_product_sum_across_obs, axis=0)
 
-    # in the denominator do the similar thing
-    sigma_denom = np.sum(gammas, axis=1)
-    sigma_denom = np.sum(sigma_denom, axis=0)
+    #Denominator
+    sigma_denom = np.sum(gammas, axis = 1)
+    sigma_denom = np.sum(sigma_denom, axis = 0)
 
-    # find the ratio and return it
-    sigma =  sigma_num / sigma_denom
+    sigma = sigma_num/sigma_denom
 
-    sigma /= np.sum(sigma)
     return sigma
+
+
+
+
+
 
 
 """Putting them together"""
