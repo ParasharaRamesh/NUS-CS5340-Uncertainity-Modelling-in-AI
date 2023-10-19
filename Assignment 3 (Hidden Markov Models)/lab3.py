@@ -220,36 +220,31 @@ def find_new_sigma(gamma_list, x_list, mu):
     N = xs.shape[1]
     K = mu.shape[0]
 
-    mu = mu[np.newaxis, :]
+    covariance = np.zeros((K))
 
-    all_sigmas_across_obs = []
     #finding numerator
-    for o in range(O):
-        #TODO.x can you think array wise here instead of element wise?
-        gamma_across_N = gammas[o] # of shape (N, K)
-        x_n = xs[o] # of shape N
+    for k in range(K):
+        num_across_obs = 0
+        denom_across_obs = 0
+        for o in range(O):
+            num_across_N = 0
+            denom_across_N = 0
+            for n in range(N):
+                granular_gamma = gammas[o,n,k]
+                x_n = xs[o, n]
+                mu_k = mu[k]
+                diff = x_n - mu_k
+                diff_transpose = diff.T
+                granular_product = granular_gamma * diff * diff_transpose
+                num_across_N += granular_product
+                denom_across_N += granular_gamma
+            num_across_obs += num_across_N
+            denom_across_obs += denom_across_N
+        covariance[k] = num_across_obs/denom_across_obs
 
-        #TODO.x need to find out the difference to get a N,K again
-        x_n = x_n[:, np.newaxis]
-        diff = x_n - mu
-        dot_product = np.sum(diff * diff)
+    #Take sqrt from covariance to get the sigma (i.e. std deviation)
+    sigma = np.sqrt(covariance)
 
-        #TODO.x dot product with itself is same as matrix multipliation with transpose!
-        granular_product = gamma_across_N * dot_product
-
-        sigma_for_obs_num = np.sum(granular_product, axis=0)
-        sigma_for_obs_denom = np.sum(gamma_across_N, axis=0)
-
-        sigma_for_obs = sigma_for_obs_num/sigma_for_obs_denom
-        all_sigmas_across_obs.append(sigma_for_obs)
-
-    #finding sigma
-    all_sigmas_across_obs = np.array(all_sigmas_across_obs)
-
-    #avg sigma across all observations
-    sigma = np.sum(all_sigmas_across_obs, axis=0)/O
-
-    #TODO.x should be around [0.51288048 0.20810693 0.2954764 ]
     return sigma
 
 """Putting them together"""
