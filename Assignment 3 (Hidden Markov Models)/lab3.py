@@ -43,7 +43,22 @@ def initialize(n_states, x):
 
 """E-step"""
 
+#TODO.x manipulate this macha!
+def multivariate_normal_pdf(x, mu, cov):
+    k = mu.shape[0]
+    det_cov = np.linalg.det(cov)
+    inv_cov = np.linalg.inv(cov)
+    diff = x - mu
+
+    exponent = -0.5 * np.dot(np.dot(diff, inv_cov), diff)
+    coefficient = 1.0 / (np.sqrt((2 * np.pi) ** k * det_cov))
+
+    return coefficient * np.exp(exponent)
+
 def calculate_alphas_and_c(x_list, pi, phi, A):
+    '''
+    TODO.x most probably alphas should be of dimension (O,N)
+    '''
     xs = np.array(x_list)
     mu = phi["mu"]
     sigma = phi["sigma"]
