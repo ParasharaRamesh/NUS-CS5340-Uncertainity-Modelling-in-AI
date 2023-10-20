@@ -158,6 +158,7 @@ class Estep:
         prob_z_curr_given_prev_z = A
 
         # multiply row wise
+        #TODO.x is it rowwise or column wise mul?
         product = prev_alpha_hat * prob_z_curr_given_prev_z
 
         # do sigma across axis=0 i.e. marginalize away z_prev
@@ -194,7 +195,6 @@ class Estep:
             c_obs = c[o]
 
             # base case
-            # TODO. something fishy!?
             betas_hat_for_obs[-1] = np.array([1.0, 1.0, 1.0])
 
             # Iterate in reverse!
@@ -213,6 +213,7 @@ class Estep:
                 # Find beta_hat_n+1 * p(x+1 | zn+1)
                 beta_times_prob_x_given_z = beta_hat_next * prob_x_n_next_given_z
 
+                #TODO.x is it column wise multiplication?
                 # getting it ready for column wise multiplication
                 beta_times_prob_x_given_z = beta_times_prob_x_given_z[:, np.newaxis]
 
