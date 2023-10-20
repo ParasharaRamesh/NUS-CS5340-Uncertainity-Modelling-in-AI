@@ -33,7 +33,7 @@ def initialize(n_states, x):
     # Gaussian Observation model parameters
     # We use k-means clustering to initalize the parameters.
     x_cat = np.concatenate(x, axis=0)
-    kmeans = KMeans(n_clusters=n_states, random_state=seed).fit(x_cat[:, None])
+    kmeans = KMeans(n_clusters=n_states.item(), random_state=seed).fit(x_cat[:, None])
     mu = kmeans.cluster_centers_[:, 0]
     std = np.array([np.std(x_cat[kmeans.labels_ == l]) for l in range(n_states)])
     phi = {'mu': mu, 'sigma': std}
@@ -73,7 +73,7 @@ def e_step(x_list, pi, A, phi):
     alphas_hat, c = Estep.calculate_scaled_alphas_and_c(x_list, pi, phi, A)
 
     # 2.  calculate scaled beta
-    betas_hat = Estep.calculate_scaled_betas(x_list, pi, phi, A, c)
+    betas_hat = Estep.calculate_scaled_betas(x_list, phi, A, c)
 
     # 3. calculate gamma
     gamma_list = alphas_hat * betas_hat
@@ -136,8 +136,8 @@ class Estep:
             c.append(c_for_obs)
             alphas_hat.append(alphas_hat_for_obs)
 
-        return np.array(alphas_hat), np.array(c)
         # return the final scaled alphas and the constants
+        return np.array(alphas_hat), np.array(c)
 
     @staticmethod
     def calculate_alpha_1(x0, pi, mu, sigma):
@@ -161,6 +161,7 @@ class Estep:
         product = prev_alpha_hat * prob_z_curr_given_prev_z
 
         # do sigma across axis=0 i.e. marginalize away z_prev
+        # TODO. seems fishy!
         product_marg_away_z_prev = np.sum(product, axis=0)
         alpha_tilde = prob_x_given_z * product_marg_away_z_prev
 
@@ -177,7 +178,7 @@ class Estep:
     '''
 
     @staticmethod
-    def calculate_scaled_betas(x_list, pi, phi, A, c):
+    def calculate_scaled_betas(x_list, phi, A, c):
         xs = np.array(x_list)  # Shape (O, N)
         mu = phi["mu"]  # Shape (K)
         sigma = phi["sigma"]  # Shape (K)
@@ -193,6 +194,7 @@ class Estep:
             c_obs = c[o]
 
             # base case
+            # TODO. something fishy!?
             betas_hat_for_obs[-1] = np.array([1.0, 1.0, 1.0])
 
             # Iterate in reverse!
@@ -217,8 +219,8 @@ class Estep:
                 product = beta_times_prob_x_given_z * prob_z_n_next_given_z
 
                 # marg away the column zn+1
-                betas_tilde_hat_n = np.sum(product, axis=1)
-                betas_hat_n = betas_tilde_hat_n / c_obs[n]
+                betas_tilde_n = np.sum(product, axis=1)
+                betas_hat_n = betas_tilde_n / c_obs[n + 1]
 
                 # assign it
                 betas_hat_for_obs[n] = betas_hat_n
@@ -263,6 +265,7 @@ class Estep:
 
                 # TODO.x not sure if it is row wise or column wise product here
                 spring_for_n_and_next = product_with_transition * beta_n_plus_1  # Shape is (K, K)
+                spring_for_n_and_next /= c_obs[n + 1]
                 spring_for_obs.append(spring_for_n_and_next)
 
             spring.append(spring_for_obs)  # spring_for_obs is of shape (N-1,K,K)
@@ -473,7 +476,9 @@ def fit_hmm(x_list, n_states):
     """
     threshold = 1e-4
 
+    i = 0
     while True:
+        print(f"i: {i}")
         gamma_list, xi_list = e_step(x_list, pi, A, phi)
         pi_new, A_new, phi_new = m_step(x_list, gamma_list, xi_list)
 
@@ -484,30 +489,15 @@ def fit_hmm(x_list, n_states):
 
         pi, A, phi = pi_new, A_new, phi_new
 
-        if has_pi_converged and has_A_converged and has_phi_mu_converged and has_phi_sigma_converged:
+        if i > 100:
+            print("Exiting after 100 loops")
             break
+
+        if has_pi_converged and has_A_converged and has_phi_mu_converged and has_phi_sigma_converged:
+            print("Reached convergence!")
+            break
+
+        i += 1
 
     return pi, A, phi
 
-
-if __name__ == '__main__':
-    # Create sample arrays G and d
-    G = np.random.rand(200, 8, 3)  # G shape: (200, 8, 3)
-    d = np.random.rand(200, 8, 3)  # d shape: (200, 8, 3)
-
-    # Step 1: Take the last axis of d and its transpose (shape (3,))
-    d_transpose = d[:, :, -1].T  # d_transpose shape: (3, 8)
-
-    # Step 2: Compute the dot product with G (shape (200, 8))
-    g_ = G[:, :, -1]
-    dot_products = np.dot(g_, d_transpose)  # dot_products shape: (200, 3)
-
-    # Step 3: Multiply each time step of G by the corresponding number from step 2
-    multiplied_arrays = G * dot_products[..., np.newaxis]  # multiplied_arrays shape: (200, 8, 3)
-
-    # Step 4: Add up these arrays along the third axis (shape (200, 8, 3))
-    summed_array = np.sum(multiplied_arrays, axis=1)  # summed_array shape: (200, 3)
-
-    # Step 5: Sum this final array along the first axis (shape (3,))
-    final_result = np.sum(summed_array, axis=0)  # final_result shape: (3,)
-    print("Fuck off")
