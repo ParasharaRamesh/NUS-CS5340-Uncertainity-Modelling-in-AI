@@ -70,12 +70,9 @@ def e_step(x_list, pi, A, phi):
     Be sure to use the scaling factor for numerical stability.
     """
 
-    #TODO.x my alphas_hat has only the first time step correct and then everything else is wrong, c is all wrong!
-    #TODO.x alpha base case is correctly done!
     # 1. calculate scaled alpha
     alphas_hat, c = Estep.calculate_scaled_alphas_and_c(x_list, pi, phi, A)
 
-    #TODO.x completely wrong
     # 2.  calculate scaled beta
     betas_hat = Estep.calculate_scaled_betas(x_list, phi, A, c)
 
@@ -85,7 +82,7 @@ def e_step(x_list, pi, A, phi):
     # 4 calculate xi_list
     xi_list = Estep.calculate_xi(x_list, alphas_hat, betas_hat, c, phi, A)
 
-    return gamma_list, xi_list, alphas_hat, betas_hat, c
+    return gamma_list, xi_list
 
 
 class Estep:
@@ -216,10 +213,7 @@ class Estep:
                 # Find beta_hat_n+1 * p(x+1 | zn+1)
                 beta_times_prob_x_given_z = beta_hat_next * prob_x_n_next_given_z
 
-                #TODO.x is it column wise multiplication?
-                # getting it ready for column wise multiplication
-                beta_times_prob_x_given_z = beta_times_prob_x_given_z[:, np.newaxis]
-
+                # getting it ready for row wise multiplication
                 product = beta_times_prob_x_given_z * prob_z_n_next_given_z
 
                 # marg away the column zn+1
@@ -247,7 +241,7 @@ class Estep:
 
         xi = []
         for o in range(O):
-            xi = []
+            xi_for_obs = []
             c_obs = c[o]
             alphas_hat_obs = alphas_hat[o]  # shape (N,K)
             betas_hat_obs = betas_hat[o]  # shape (N,K)
@@ -270,9 +264,9 @@ class Estep:
                 # TODO.x not sure if it is row wise or column wise product here
                 xi_for_n_and_next = product_with_transition * beta_n_plus_1  # Shape is (K, K)
                 xi_for_n_and_next /= c_obs[n + 1]
-                xi.append(xi_for_n_and_next)
+                xi_for_obs.append(xi_for_n_and_next)
 
-            xi.append(xi)  # xi is of shape (N-1,K,K)
+            xi.append(xi_for_obs)  # xi is of shape (N-1,K,K)
         return np.array(xi)
 
     '''

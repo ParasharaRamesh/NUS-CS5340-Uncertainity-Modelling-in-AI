@@ -26,10 +26,10 @@ def wrap_test(func):
 def test_e_step():
     for test_case in TEST_CASES:
         #TODO.x remove these
-        analysis_npzfile = np.load(f"data/temp/{test_case}_abc.npz")
-        expected_alpha = analysis_npzfile['alpha_list']
-        expected_beta = analysis_npzfile['beta_list']
-        expected_c = analysis_npzfile['c_list']
+        # analysis_npzfile = np.load(f"data/temp/{test_case}_abc.npz")
+        # expected_alpha = analysis_npzfile['alpha_list']
+        # expected_beta = analysis_npzfile['beta_list']
+        # expected_c = analysis_npzfile['c_list']
 
         npzfile = np.load('data/{}.npz'.format(test_case))
         x_list = list(npzfile['x'])
@@ -42,23 +42,15 @@ def test_e_step():
         A = npzfile['A']
         phi = {'mu': npzfile['mu'], 'sigma': npzfile['sigma']}
 
-        #TODO.x test
-        gamma_list, xi_list, my_alphas, my_betas, my_c = e_step(x_list, pi, A, phi)
-
-
         # Run algo
-        # gamma_list, xi_list = e_step(x_list, pi, A, phi)
-
-        #Test if the shapes are correct
-        assert len(gamma_list) == len(expected_gamma), 'Gamma list is of incorrect length'
-        assert len(xi_list) == len(expected_xi_list), 'Xi is of incorrect length'
+        gamma_list, xi_list = e_step(x_list, pi, A, phi)
 
         # Check gamma
-        # for g in range(len(gamma_list)):
+        assert len(gamma_list) == len(expected_gamma), 'Gamma list is of incorrect length'
         assert np.allclose(gamma_list, expected_gamma), 'Gamma incorrect'
 
         # Check xi
-        # for g in range(len(xi_list)):
+        assert len(xi_list) == len(expected_xi_list), 'Xi is of incorrect length'
         assert np.allclose(xi_list, expected_xi_list), 'Xi incorrect'
 
 
