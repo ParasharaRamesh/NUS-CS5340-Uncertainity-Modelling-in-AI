@@ -69,9 +69,13 @@ def e_step(x_list, pi, A, phi):
     "gamma_list" and "xi_list" with the correct values.
     Be sure to use the scaling factor for numerical stability.
     """
+
+    #TODO.x my alphas_hat has only the first time step correct and then everything else is wrong, c is all wrong!
+    #TODO.x alpha base case is correctly done!
     # 1. calculate scaled alpha
     alphas_hat, c = Estep.calculate_scaled_alphas_and_c(x_list, pi, phi, A)
 
+    #TODO.x completely wrong
     # 2.  calculate scaled beta
     betas_hat = Estep.calculate_scaled_betas(x_list, phi, A, c)
 
@@ -81,7 +85,7 @@ def e_step(x_list, pi, A, phi):
     # 4 calculate xi_list
     xi_list = Estep.calculate_xi(x_list, alphas_hat, betas_hat, c, phi, A)
 
-    return gamma_list, xi_list
+    return gamma_list, xi_list, alphas_hat, betas_hat, c
 
 
 class Estep:
@@ -111,8 +115,8 @@ class Estep:
             # base case for this observation
             x0 = xs[o, 0]
             alpha_1 = Estep.calculate_alpha_1(x0, pi, mu, sigma)  # should be of shape (K)
-            alpha_1_hat = alpha_1 / np.sum(alpha_1)
-            c_1 = np.sum(alpha_1_hat)
+            c_1 = np.sum(alpha_1)
+            alpha_1_hat = alpha_1 / c_1
 
             # store the base case
             c_for_obs.append(c_1)
@@ -157,12 +161,11 @@ class Estep:
         prev_alpha_hat = alphas_hat[-1]
         prob_z_curr_given_prev_z = A
 
-        # multiply row wise
-        #TODO.x is it rowwise or column wise mul?
+        # multiplying column wise
+        prev_alpha_hat = prev_alpha_hat[:,np.newaxis]
         product = prev_alpha_hat * prob_z_curr_given_prev_z
 
         # do sigma across axis=0 i.e. marginalize away z_prev
-        # TODO. seems fishy!
         product_marg_away_z_prev = np.sum(product, axis=0)
         alpha_tilde = prob_x_given_z * product_marg_away_z_prev
 
