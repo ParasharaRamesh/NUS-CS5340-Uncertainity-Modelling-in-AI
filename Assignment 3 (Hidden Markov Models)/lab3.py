@@ -12,6 +12,7 @@ from sklearn.cluster import KMeans
 from tqdm import tqdm
 import itertools
 
+
 def initialize(n_states, x):
     """Initializes starting value for initial state distribution pi
     and state transition matrix A.
@@ -250,14 +251,14 @@ class Estep:
             # go till last but one!
             for n in range(1, N):
                 x_n = xs[o, n]
-                alpha_n_minus_1 = alphas_hat_obs[n-1]  # Shape (K)
+                alpha_n_minus_1 = alphas_hat_obs[n - 1]  # Shape (K)
                 beta_n = betas_hat_obs[n]  # Shape (K)
                 prob_z_n_given_prev_z = A
 
                 prob_x_next_given_z = Estep.calculate_prob_x_given_z(x_n, mu, sigma)  # Shape (K)
 
-                #make it a matrix here itself (3,1) x (1,3), because we are dealing with both zn-1 and zn
-                product_alpha_with_prob_x_given_z = alpha_n_minus_1[:,None] * prob_x_next_given_z[None,:]
+                # make it a matrix here itself (3,1) x (1,3), because we are dealing with both zn-1 and zn
+                product_alpha_with_prob_x_given_z = alpha_n_minus_1[:, None] * prob_x_next_given_z[None, :]
 
                 # element wise matrix multiplication
                 product_with_transition = product_alpha_with_prob_x_given_z * prob_z_n_given_prev_z
@@ -475,23 +476,18 @@ def fit_hmm(x_list, n_states):
     """
     threshold = 1e-4
 
-    # i = 0
-    # while True:
     for i in tqdm(itertools.count(), unit=' EM Loop'):
         gamma_list, xi_list = e_step(x_list, pi, A, phi)
         pi_new, A_new, phi_new = m_step(x_list, gamma_list, xi_list)
 
-        has_pi_converged = np.all(np.isclose(pi, pi_new, threshold))
-        has_A_converged = np.all(np.isclose(A, A_new, threshold))
-        has_phi_mu_converged = np.all(np.isclose(phi["mu"], phi_new["mu"], threshold))
-        has_phi_sigma_converged = np.all(np.isclose(phi["sigma"], phi_new["sigma"], threshold))
-
-        pi, A, phi = pi_new, A_new, phi_new
+        has_pi_converged = np.max(np.abs(pi - pi_new)) < threshold
+        has_A_converged = np.max(np.abs(A - A_new)) < threshold
+        has_phi_mu_converged = np.max(np.abs(phi["mu"] - phi_new["mu"])) < threshold
+        has_phi_sigma_converged = np.max(np.abs(phi["sigma"] - phi_new["sigma"])) < threshold
 
         if has_pi_converged and has_A_converged and has_phi_mu_converged and has_phi_sigma_converged:
             print("Reached convergence!")
             break
 
-        # i += 1
-
+        pi, A, phi = pi_new, A_new, phi_new
     return pi, A, phi
