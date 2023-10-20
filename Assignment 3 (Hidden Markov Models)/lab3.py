@@ -79,7 +79,7 @@ def e_step(x_list, pi, A, phi):
     gamma_list = alphas_hat * betas_hat
 
     # 4 calculate xi_list
-    xi_list = Estep.calculate_spring(x_list, alphas_hat, betas_hat, c, phi, A)
+    xi_list = Estep.calculate_xi(x_list, alphas_hat, betas_hat, c, phi, A)
 
     return gamma_list, xi_list
 
@@ -234,7 +234,7 @@ class Estep:
     '''Function to calculate the spring (dont know what that greek letter is so calling it a spring)'''
 
     @staticmethod
-    def calculate_spring(x_list, alphas_hat, betas_hat, c, phi, A):
+    def calculate_xi(x_list, alphas_hat, betas_hat, c, phi, A):
         mu = phi["mu"]
         sigma = phi["sigma"]
         xs = np.array(x_list)
@@ -242,9 +242,9 @@ class Estep:
         O = alphas_hat.shape[0]
         N = c.shape[1]
 
-        spring = []
+        xi = []
         for o in range(O):
-            spring_for_obs = []
+            xi = []
             c_obs = c[o]
             alphas_hat_obs = alphas_hat[o]  # shape (N,K)
             betas_hat_obs = betas_hat[o]  # shape (N,K)
@@ -265,12 +265,12 @@ class Estep:
                 product_with_transition = product_alpha_with_prob_x_given_z * prob_z_n_given_prev_z
 
                 # TODO.x not sure if it is row wise or column wise product here
-                spring_for_n_and_next = product_with_transition * beta_n_plus_1  # Shape is (K, K)
-                spring_for_n_and_next /= c_obs[n + 1]
-                spring_for_obs.append(spring_for_n_and_next)
+                xi_for_n_and_next = product_with_transition * beta_n_plus_1  # Shape is (K, K)
+                xi_for_n_and_next /= c_obs[n + 1]
+                xi.append(xi_for_n_and_next)
 
-            spring.append(spring_for_obs)  # spring_for_obs is of shape (N-1,K,K)
-        return np.array(spring)
+            xi.append(xi)  # xi is of shape (N-1,K,K)
+        return np.array(xi)
 
     '''
     Common helper functions for both alpha and beta
