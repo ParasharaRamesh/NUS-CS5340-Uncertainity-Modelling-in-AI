@@ -70,60 +70,222 @@ def e_step(x_list, pi, A, phi):
     Be sure to use the scaling factor for numerical stability.
     """
     # 1. calculate scaled alpha
-    alphas_hat, c_n = Estep.calculate_scaled_alphas_and_c(x_list, pi, phi, A)
+    alphas_hat, c = Estep.calculate_scaled_alphas_and_c(x_list, pi, phi, A)
 
     # 2.  calculate scaled beta
-    # betas_hat = Estep.calculate_scaled_betas(x_list, pi, phi, A, c_n)
+    betas_hat = Estep.calculate_scaled_betas(x_list, pi, phi, A, c)
 
     # 3. calculate gamma
-    # gamma_list = Estep.calculate_gamma(alphas_hat, betas_hat)
+    gamma_list = alphas_hat * betas_hat
 
     # 4 calculate xi_list
-    # xi_list = Estep.calculate_spring(alphas_hat, betas_hat, c_n, pi, phi, A)
+    xi_list = Estep.calculate_spring(x_list, alphas_hat, betas_hat, c, phi, A)
 
     return gamma_list, xi_list
 
 
 class Estep:
-    @staticmethod
-    def multivariate_normal_pdf(x, mu, cov):
-        k = mu.shape[0]
-        det_cov = np.linalg.det(cov)
-        inv_cov = np.linalg.inv(cov)
-        diff = x - mu
+    '''
+    Functions related to calculating alpha
 
-        exponent = -0.5 * np.dot(np.dot(diff, inv_cov), diff)
-        coefficient = 1.0 / (np.sqrt((2 * np.pi) ** k * det_cov))
-
-        return coefficient * np.exp(exponent)
+    '''
 
     @staticmethod
     def calculate_scaled_alphas_and_c(x_list, pi, phi, A):
-        xs = np.array(x_list) #Shape (O, N)
-        mu = phi["mu"] #Shape (K)
-        sigma = phi["sigma"] #Shape (K)
+        xs = np.array(x_list)  # Shape (O, N)
+        mu = phi["mu"]  # Shape (K)
+        sigma = phi["sigma"]  # Shape (K)
 
         O = xs.shape[0]
         N = xs.shape[1]
         K = mu.shape[0]
 
-        alphas_hat = [] #should eventually be a shape of (O,N,K)
-        c = [] #should eventually be a shape of (O, N)
+        alphas_hat = []  # should eventually be a shape of (O,N,K)
+        c = []  # should eventually be a shape of (O, N)
 
-        for o in range(O): # for each observation
+        for o in range(O):  # for each observation
+            # for each observation keep track of the alphas and c for this particular observation
+            alphas_hat_for_obs = []
+            c_for_obs = []
+
             # base case for this observation
+            x0 = xs[o, 0]
+            alpha_1 = Estep.calculate_alpha_1(x0, pi, mu, sigma)  # should be of shape (K)
+            alpha_1_hat = alpha_1 / np.sum(alpha_1)
+            c_1 = np.sum(alpha_1_hat)
+
+            # store the base case
+            c_for_obs.append(c_1)
+            alphas_hat_for_obs.append(alpha_1_hat)
 
             # using this base case perform tabulation to find alpha tilde
+            for n in range(1, N):
+                x_n = xs[o, n]
 
-            # from alpha tilde find out the cn and alpha_hat(zn)
+                # calculate alpha_tilde for the nth timestep
+                alpha_n_tilde = Estep.calculate_alpha_tilde(x_n, alphas_hat_for_obs, A, mu, sigma)
 
-            # store in the arrays
+                # Find alpha_hat_n & c_n using the previously calculated alpha_n_tilde
+                alpha_n_hat, c_n = Estep.calculate_alpha_hat_and_c(alpha_n_tilde)
 
+                # store
+                c_for_obs.append(c_n)
+                alphas_hat_for_obs.append(alpha_n_hat)
 
-            pass
+            # store in the arrays across observations
+            c.append(c_for_obs)
+            alphas_hat.append(alphas_hat_for_obs)
 
-        #return the final scaled alphas and the constants
         return np.array(alphas_hat), np.array(c)
+        # return the final scaled alphas and the constants
+
+    @staticmethod
+    def calculate_alpha_1(x0, pi, mu, sigma):
+        K = mu.shape[0]
+        alpha_1 = np.zeros((K))
+
+        for k in range(K):
+            normal_prob = Estep.calculate_prob_using_gausian(x0, mu[k], sigma[k])
+            alpha_1[k] = pi[k] * normal_prob
+
+        return alpha_1
+
+    @staticmethod
+    def calculate_alpha_tilde(x, alphas_hat, A, mu, sigma):
+        # shape (K)
+        prob_x_given_z = Estep.calculate_prob_x_given_z(x, mu, sigma)
+        prev_alpha_hat = alphas_hat[-1]
+        prob_z_curr_given_prev_z = A
+
+        # multiply row wise
+        product = prev_alpha_hat * prob_z_curr_given_prev_z
+
+        # do sigma across axis=0 i.e. marginalize away z_prev
+        product_marg_away_z_prev = np.sum(product, axis=0)
+        alpha_tilde = prob_x_given_z * product_marg_away_z_prev
+
+        return alpha_tilde
+
+    @staticmethod
+    def calculate_alpha_hat_and_c(alpha_n_tilde):
+        c_n = np.sum(alpha_n_tilde)
+        alpha_n_hat = alpha_n_tilde / c_n
+        return alpha_n_hat, c_n
+
+    '''
+    Functions for calculating beta
+    '''
+
+    @staticmethod
+    def calculate_scaled_betas(x_list, pi, phi, A, c):
+        xs = np.array(x_list)  # Shape (O, N)
+        mu = phi["mu"]  # Shape (K)
+        sigma = phi["sigma"]  # Shape (K)
+
+        O = xs.shape[0]
+        N = xs.shape[1]
+        K = mu.shape[0]
+
+        betas_hat = []
+
+        for o in range(O):
+            betas_hat_for_obs = [None] * N
+            c_obs = c[o]
+
+            # base case
+            betas_hat_for_obs[-1] = np.array([1.0, 1.0, 1.0])
+
+            # Iterate in reverse!
+            for n in range(N - 2, -1, -1):
+                x_n_next = xs[o, n + 1]
+
+                # Shape (K)
+                beta_hat_next = betas_hat_for_obs[n + 1]
+
+                # Shape (K)
+                prob_x_n_next_given_z = Estep.calculate_prob_x_given_z(x_n_next, mu, sigma)
+
+                # Shape (K, K)
+                prob_z_n_next_given_z = A
+
+                # Find beta_hat_n+1 * p(x+1 | zn+1)
+                beta_times_prob_x_given_z = beta_hat_next * prob_x_n_next_given_z
+
+                # getting it ready for column wise multiplication
+                beta_times_prob_x_given_z = beta_times_prob_x_given_z[:, np.newaxis]
+
+                product = beta_times_prob_x_given_z * prob_z_n_next_given_z
+
+                # marg away the column zn+1
+                betas_tilde_hat_n = np.sum(product, axis=1)
+                betas_hat_n = betas_tilde_hat_n / c_obs[n]
+
+                # assign it
+                betas_hat_for_obs[n] = betas_hat_n
+
+            # append the betas_hat computed for each obs to the total
+            betas_hat.append(betas_hat_for_obs)
+
+        return np.array(betas_hat)
+
+    '''Function to calculate the spring (dont know what that greek letter is so calling it a spring)'''
+
+    @staticmethod
+    def calculate_spring(x_list, alphas_hat, betas_hat, c, phi, A):
+        mu = phi["mu"]
+        sigma = phi["sigma"]
+        xs = np.array(x_list)
+
+        O = alphas_hat.shape[0]
+        N = c.shape[1]
+
+        spring = []
+        for o in range(O):
+            spring_for_obs = []
+            c_obs = c[o]
+            alphas_hat_obs = alphas_hat[o]  # shape (N,K)
+            betas_hat_obs = betas_hat[o]  # shape (N,K)
+
+            # go till last but one!
+            for n in range(N - 1):
+                alpha_n = alphas_hat_obs[n]  # Shape (K)
+                beta_n_plus_1 = betas_hat_obs[n + 1]  # Shape (K)
+
+                x_n_next = xs[o, n + 1]
+                prob_x_next_given_z_next = Estep.calculate_prob_x_given_z(x_n_next, mu, sigma)  # Shape (K)
+
+                prob_z_n_given_prev_z = A
+
+                product_alpha_with_prob_x_given_z = alpha_n * prob_x_next_given_z_next
+
+                # TODO.x not sure if it is row wise or column wise product here
+                product_with_transition = product_alpha_with_prob_x_given_z * prob_z_n_given_prev_z
+
+                # TODO.x not sure if it is row wise or column wise product here
+                spring_for_n_and_next = product_with_transition * beta_n_plus_1  # Shape is (K, K)
+                spring_for_obs.append(spring_for_n_and_next)
+
+            spring.append(spring_for_obs)  # spring_for_obs is of shape (N-1,K,K)
+        return np.array(spring)
+
+    '''
+    Common helper functions for both alpha and beta
+    '''
+
+    @staticmethod
+    def calculate_prob_x_given_z(x, mu, sigma):
+        K = mu.shape[0]
+        prob = np.zeros((K))
+        for k in range(K):
+            prob[k] = Estep.calculate_prob_using_gausian(x, mu[k], sigma[k])
+        return prob
+
+    @staticmethod
+    def calculate_prob_using_gausian(x, mu, sigma):
+        z = (x - mu) / sigma
+        exponent = -0.5 * np.square(z)
+        coefficient = 1.0 / (sigma * np.sqrt(2 * np.pi))
+        return coefficient * np.exp(exponent)
 
 
 """M-step"""
@@ -171,8 +333,7 @@ def m_step(x_list, gamma_list, xi_list):
 
     return pi, A, phi
 
-
-""" Functions for calculating each new parameter"""
+    """ Functions for calculating each new parameter"""
 
 
 class Mstep:

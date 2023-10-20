@@ -38,19 +38,17 @@ def test_e_step():
         # Run algo
         gamma_list, xi_list = e_step(x_list, pi, A, phi)
 
+        #Test if the shapes are correct
+        assert len(gamma_list) == len(npzfile['gamma_list']), 'Gamma list is of incorrect length'
+        assert len(xi_list) == len(npzfile['xi_list']), 'Xi is of incorrect length'
+
         # Check gamma
-        assert len(gamma_list) == len(npzfile['gamma_list']), \
-            'Gamma list is of incorrect length'
-        for g in range(len(gamma_list)):
-            assert np.allclose(gamma_list, npzfile['gamma_list']), \
-                'Gamma incorrect'
+        # for g in range(len(gamma_list)):
+        assert np.allclose(gamma_list, npzfile['gamma_list']), 'Gamma incorrect'
 
         # Check xi
-        assert len(xi_list) == len(npzfile['xi_list']), \
-            'Xi is of incorrect length'
-        for g in range(len(xi_list)):
-            assert np.allclose(xi_list, npzfile['xi_list']), \
-                'Xi incorrect'
+        # for g in range(len(xi_list)):
+        assert np.allclose(xi_list, npzfile['xi_list']), 'Xi incorrect'
 
 
 @wrap_test
