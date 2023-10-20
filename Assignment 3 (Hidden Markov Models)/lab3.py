@@ -159,7 +159,7 @@ class Estep:
         prob_z_curr_given_prev_z = A
 
         # multiplying column wise
-        prev_alpha_hat = prev_alpha_hat[:,np.newaxis]
+        prev_alpha_hat = prev_alpha_hat[:, np.newaxis]
         product = prev_alpha_hat * prob_z_curr_given_prev_z
 
         # do sigma across axis=0 i.e. marginalize away z_prev
@@ -195,7 +195,7 @@ class Estep:
             c_obs = c[o]
 
             # base case
-            betas_hat_for_obs[-1] = np.array([1.0, 1.0, 1.0])
+            betas_hat_for_obs[-1] = np.array([1.0] * K)
 
             # Iterate in reverse!
             for n in range(N - 2, -1, -1):
@@ -247,23 +247,23 @@ class Estep:
             betas_hat_obs = betas_hat[o]  # shape (N,K)
 
             # go till last but one!
-            for n in range(N - 1):
-                alpha_n = alphas_hat_obs[n]  # Shape (K)
-                beta_n_plus_1 = betas_hat_obs[n + 1]  # Shape (K)
-
-                x_n_next = xs[o, n + 1]
-                prob_x_next_given_z_next = Estep.calculate_prob_x_given_z(x_n_next, mu, sigma)  # Shape (K)
-
+            for n in range(1, N):
+                x_n = xs[o, n]
+                alpha_n_minus_1 = alphas_hat_obs[n-1]  # Shape (K)
+                beta_n = betas_hat_obs[n]  # Shape (K)
                 prob_z_n_given_prev_z = A
 
-                product_alpha_with_prob_x_given_z = alpha_n * prob_x_next_given_z_next
+                prob_x_next_given_z = Estep.calculate_prob_x_given_z(x_n, mu, sigma)  # Shape (K)
 
-                # TODO.x not sure if it is row wise or column wise product here
+                #make it a matrix here itself (3,1) x (1,3), because we are dealing with both zn-1 and zn
+                product_alpha_with_prob_x_given_z = alpha_n_minus_1[:,None] * prob_x_next_given_z[None,:]
+
+                # element wise matrix multiplication
                 product_with_transition = product_alpha_with_prob_x_given_z * prob_z_n_given_prev_z
 
-                # TODO.x not sure if it is row wise or column wise product here
-                xi_for_n_and_next = product_with_transition * beta_n_plus_1  # Shape is (K, K)
-                xi_for_n_and_next /= c_obs[n + 1]
+                # row wise product here
+                xi_for_n_and_next = product_with_transition * beta_n  # Shape is (K, K)
+                xi_for_n_and_next /= c_obs[n]
                 xi_for_obs.append(xi_for_n_and_next)
 
             xi.append(xi_for_obs)  # xi is of shape (N-1,K,K)
@@ -498,4 +498,3 @@ def fit_hmm(x_list, n_states):
         i += 1
 
     return pi, A, phi
-

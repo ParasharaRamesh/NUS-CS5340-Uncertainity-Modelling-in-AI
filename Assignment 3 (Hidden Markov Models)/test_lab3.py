@@ -25,12 +25,6 @@ def wrap_test(func):
 @wrap_test
 def test_e_step():
     for test_case in TEST_CASES:
-        #TODO.x remove these
-        # analysis_npzfile = np.load(f"data/temp/{test_case}_abc.npz")
-        # expected_alpha = analysis_npzfile['alpha_list']
-        # expected_beta = analysis_npzfile['beta_list']
-        # expected_c = analysis_npzfile['c_list']
-
         npzfile = np.load('data/{}.npz'.format(test_case))
         x_list = list(npzfile['x'])
         n_states = npzfile['n_states']
