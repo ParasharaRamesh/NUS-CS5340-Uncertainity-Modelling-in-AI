@@ -9,7 +9,8 @@ import numpy as np
 import scipy.stats
 from scipy.special import softmax
 from sklearn.cluster import KMeans
-
+from tqdm import tqdm
+import itertools
 
 def initialize(n_states, x):
     """Initializes starting value for initial state distribution pi
@@ -474,9 +475,9 @@ def fit_hmm(x_list, n_states):
     """
     threshold = 1e-4
 
-    i = 0
-    while True:
-        print(f"i: {i}")
+    # i = 0
+    # while True:
+    for i in tqdm(itertools.count(), unit=' EM Loop'):
         gamma_list, xi_list = e_step(x_list, pi, A, phi)
         pi_new, A_new, phi_new = m_step(x_list, gamma_list, xi_list)
 
@@ -487,14 +488,10 @@ def fit_hmm(x_list, n_states):
 
         pi, A, phi = pi_new, A_new, phi_new
 
-        if i > 100:
-            print("Exiting after 100 loops")
-            break
-
         if has_pi_converged and has_A_converged and has_phi_mu_converged and has_phi_sigma_converged:
             print("Reached convergence!")
             break
 
-        i += 1
+        # i += 1
 
     return pi, A, phi
