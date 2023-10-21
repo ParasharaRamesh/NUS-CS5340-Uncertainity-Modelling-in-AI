@@ -7,8 +7,7 @@ import os
 
 from lab3 import e_step, m_step, fit_hmm
 
-
-TEST_CASES = ['seq_short', 'seq_long']
+TEST_CASES = ['seq_short', 'seq_short2', 'seq_long', 'seq_long2']
 
 
 def wrap_test(func):
@@ -19,6 +18,7 @@ def wrap_test(func):
             print('{}: PASSED'.format(func_name))
         except Exception as e:
             print('{}: FAILED, reason: {} ***'.format(func_name, str(e)))
+
     return inner
 
 
@@ -66,13 +66,10 @@ def test_m_step():
         assert np.allclose(phi['mu'], npzfile['test_m_step_mu']), 'mu is incorrect'
 
 
-
 def run_fit_hmm():
-
     for test_case in TEST_CASES:
-
         print('Running on {}'.format(test_case))
-        print('---------------------')
+        print('---------------------------------------------')
 
         # Load data
         npzfile = np.load('data/{}.npz'.format(test_case))
