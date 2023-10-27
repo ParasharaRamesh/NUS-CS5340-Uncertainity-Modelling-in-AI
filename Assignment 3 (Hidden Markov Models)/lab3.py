@@ -480,10 +480,17 @@ def fit_hmm(x_list, n_states):
         gamma_list, xi_list = e_step(x_list, pi, A, phi)
         pi_new, A_new, phi_new = m_step(x_list, gamma_list, xi_list)
 
-        has_pi_converged = np.max(np.abs(pi - pi_new)) < threshold
-        has_A_converged = np.max(np.abs(A - A_new)) < threshold
-        has_phi_mu_converged = np.max(np.abs(phi["mu"] - phi_new["mu"])) < threshold
-        has_phi_sigma_converged = np.max(np.abs(phi["sigma"] - phi_new["sigma"])) < threshold
+        #old convergence code
+        # has_pi_converged = np.max(np.abs(pi - pi_new)) < threshold
+        # has_A_converged = np.max(np.abs(A - A_new)) < threshold
+        # has_phi_mu_converged = np.max(np.abs(phi["mu"] - phi_new["mu"])) < threshold
+        # has_phi_sigma_converged = np.max(np.abs(phi["sigma"] - phi_new["sigma"])) < threshold
+
+        #new convergence code
+        has_pi_converged = np.allclose(pi, pi_new, atol=threshold)
+        has_A_converged = np.allclose(A, A_new, atol=threshold)
+        has_phi_mu_converged = np.allclose(phi["mu"], phi_new["mu"], atol=threshold)
+        has_phi_sigma_converged = np.allclose(phi["sigma"], phi_new["sigma"], atol=threshold)
 
         if has_pi_converged and has_A_converged and has_phi_mu_converged and has_phi_sigma_converged:
             print("Reached convergence!")
