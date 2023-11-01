@@ -1,9 +1,9 @@
 """ CS5340 Lab 4 Part 2: Gibbs Sampling
 See accompanying PDF for instructions.
 
-Name: <Your Name here>
-Email: <username>@u.nus.edu
-Student ID: A0123456X
+Name: Parashara Ramesh
+Email: e1216292@u.nus.edu
+Student ID: A0285647M
 """
 
 
