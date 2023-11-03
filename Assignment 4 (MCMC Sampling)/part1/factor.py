@@ -50,6 +50,27 @@ class Factor:
             str += line + '\n'
         return str
 
+    # def __eq__(self, other):
+    #     """Checks whether two factors are the same.
+    #     Note: Does not check the argmax field
+    #     """
+    #     if set(self.var) != set(other.var):
+    #         return False
+    #
+    #     # Finds the mapping for variable ordering
+    #     map_other = np.argmax(self.var[None, :] == other.var[:, None], axis=-1)
+    #
+    #     if not np.all(self.card[map_other] == other.card):
+    #         return False
+    #
+    #     self_assignments = self.get_all_assignments()
+    #     other_assignments = self_assignments[:, map_other]
+    #     other_index = assignment_to_index(other_assignments, other.card)
+    #     if np.allclose(self.val, other.val[other_index]):
+    #         return True
+    #     else:
+    #         return False
+
     def normalize(self):
         """Normalize the probablity such that it sums to 1.
         Use this function with care since not all factor tables should be

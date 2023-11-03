@@ -14,6 +14,7 @@ from factor_utils import factor_evidence, factor_product, assignment_to_index, i
 from factor import Factor
 from argparse import ArgumentParser
 from tqdm import tqdm
+import matplotlib.pyplot as plt
 
 PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
@@ -22,6 +23,39 @@ PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
 # PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
 
 """ ADD HELPER FUNCTIONS HERE """
+def visualize_graph(graph, weighted=False):
+    pos = nx.spring_layout(graph)
+    nx.draw_networkx(graph, pos=pos, with_labels=True, font_weight='bold',
+                     node_size=1000, arrowsize=20)
+    # only for weighted
+    if weighted:
+        edge_labels = {(u, v): d['weight'] for u, v, d in graph.edges(data=True)}
+        nx.draw_networkx_edge_labels(graph, pos=pos, edge_labels=edge_labels)
+    plt.axis('off')
+    plt.show()
+
+def construct_graph_from_factors(factors):
+    '''
+
+    @param factors:
+    @return: nx graph & topological order
+    '''
+    graph = nx.DiGraph()
+
+    for node, factor in factors.items():
+        factor_vars = factor.var
+        graph.add_nodes_from(factor_vars)
+        if len(factor_vars) == 1:
+            #because no edges can be added from this
+            continue
+        else:
+            last_var = factor_vars[-1]
+            for var in factor_vars[:-1]:
+                graph.add_edge(var, last_var)
+
+    topological_order = list(nx.topological_sort(graph))
+    return graph, topological_order
+
 
 """ END HELPER FUNCTIONS HERE """
 
@@ -42,6 +76,11 @@ def _sample_step(nodes, proposal_factors):
     samples = {}
 
     """ YOUR CODE HERE: Use np.random.choice """
+
+    #TODO.1 proposal factor key's dont have any meaning here just use the values here!
+
+
+
     """ END YOUR CODE HERE """
 
     assert len(samples.keys()) == len(nodes)
@@ -71,9 +110,31 @@ def _get_conditional_probability(target_factors, proposal_factors, evidence, num
     out = Factor()
 
     """ YOUR CODE HERE """
-    #TODO.1 from the target factors find out the exact topological graph (maybe store it in some nx graph if needed)
+    #1.a Construct the graph from the target factors
+    target_graph, target_factor_topological_order = construct_graph_from_factors(target_factors)
 
-    #TODO.2 given evidence, remove those nodes and edges connected with it -> find the new table -> topological graph for this also
+    #1.b Observe the evidence for the proposal factors
+    if len(evidence) > 0:
+        for proposal_node, proposal_factor in proposal_factors.items():
+            #NOTE: using factor evidence removes the node all together
+            proposal_factor_after_observing_evidence = factor_evidence(proposal_factor, evidence)
+            proposal_factors[proposal_node] = proposal_factor_after_observing_evidence
+
+    #1.c Construct the graph from the proposal factors
+    proposal_graph, proposal_factor_topological_order = construct_graph_from_factors(proposal_factors)
+
+    #1.d visualize graphs
+    # visualize_graph(target_graph)
+    # visualize_graph(proposal_graph)
+
+    #2. Get all the samples from proposal distribution
+    all_sampled_states = []
+
+    for iteration in range(num_iterations):
+        state_of_variables_in_proposal_distribution = _sample_step(proposal_factor_topological_order, proposal_factors)
+        all_sampled_states.append(state_of_variables_in_proposal_distribution)
+
+    #3. Calculate the p , q, r, w values
 
     #TODO.2.a for this write some function where given a factor and some particular slice we return only that row ( might have to use assignmentToIndex here)
 
