@@ -6,7 +6,6 @@ Email: e1216292@u.nus.edu
 Student ID: A0285647M
 """
 
-
 import copy
 import os
 import json
@@ -14,18 +13,17 @@ import numpy as np
 from tqdm import tqdm
 from collections import Counter
 from argparse import ArgumentParser
-from factor_utils import factor_evidence, factor_marginalize, assignment_to_index
+from factor_utils import factor_evidence, factor_marginalize, assignment_to_index, index_to_assignment
 from factor import Factor
-
 
 PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 INPUT_DIR = os.path.join(DATA_DIR, 'inputs')
-PREDICTION_DIR = os.path.join(DATA_DIR, 'predictions')
+# PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
+PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
 GROUND_TRUTH_DIR = os.path.join(DATA_DIR, 'ground-truth')
 
 """ HELPER FUNCTIONS HERE """
-
 
 """ END HELPER FUNCTIONS HERE"""
 
@@ -55,6 +53,10 @@ def _get_conditional_probability(nodes, edges, factors, evidence, initial_sample
     """
     Returns the conditional probability p(Xf | Xe) where Xe is the set of observed nodes and Xf are the query nodes
     i.e. the unobserved nodes. The conditional probability is approximated using Gibbs sampling.
+
+    Additionally reduce the proposal distributions for each node to its
+    Markov Blanket and the graph structure must be updated with
+    the evidence variables.
 
     Args:
         nodes: numpy array of nodes e.g. [x1, x2, ...].

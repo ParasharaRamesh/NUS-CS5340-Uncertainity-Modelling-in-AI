@@ -19,7 +19,7 @@ from factor_utils import factor_product, factor_evidence, factor_marginalize
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'data')
 INPUT_DIR = os.path.join(DATA_DIR, 'inputs')  # we will store the input data files here!
-PREDICTION_DIR = os.path.join(DATA_DIR, 'predictions')  # we will store the prediction files here!
+PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')  # we will store the prediction files here!
 
 """ ADD HELPER FUNCTIONS HERE """
 

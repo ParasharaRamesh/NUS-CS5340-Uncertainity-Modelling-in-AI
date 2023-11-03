@@ -17,7 +17,7 @@ from argparse import ArgumentParser
 BASE_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(BASE_DIR, 'data')  # we will store the input data files here!
 OBSERVATION_DIR = os.path.join(DATA_DIR, 'observations')
-PREDICTION_DIR = os.path.join(DATA_DIR, 'predictions')
+PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
 
 """ ADD HELPER FUNCTIONS HERE """
 

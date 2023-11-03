@@ -93,7 +93,7 @@ def run_fit_hmm():
         print('Your A:\n', A)
         print('Your phi:\n', phi)
 
-        # Save out predictions
+        # Save out ta_predictions
         with open('pred/{}.npz'.format(test_case), 'wb') as fid:
             np.savez(fid, pi=pi, A=A,
                      mu=phi['mu'], sigma=phi['sigma'])

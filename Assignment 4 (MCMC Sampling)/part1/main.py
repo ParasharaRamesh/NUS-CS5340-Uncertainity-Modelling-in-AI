@@ -10,7 +10,7 @@ import os
 import json
 import numpy as np
 import networkx as nx
-from factor_utils import factor_evidence, factor_product, assignment_to_index
+from factor_utils import factor_evidence, factor_product, assignment_to_index, index_to_assignment
 from factor import Factor
 from argparse import ArgumentParser
 from tqdm import tqdm
@@ -18,12 +18,10 @@ from tqdm import tqdm
 PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 INPUT_DIR = os.path.join(DATA_DIR, 'inputs')
-PREDICTION_DIR = os.path.join(DATA_DIR, 'predictions')
-
+PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
+# PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
 
 """ ADD HELPER FUNCTIONS HERE """
-
-
 
 """ END HELPER FUNCTIONS HERE """
 
@@ -55,6 +53,8 @@ def _get_conditional_probability(target_factors, proposal_factors, evidence, num
     Performs multiple iterations of importance sampling and returns the conditional distribution p(Xf | Xe) where
     Xe are the evidence nodes and Xf are the query nodes (unobserved).
 
+    The graph structure must be updated with the evidence variables.
+
     Args:
         target_factors: dictionary of node:Factor pair where Factor is the target distribution of the node.
                         Other nodes in the Factor are parent nodes of the node. The product of the target
@@ -71,6 +71,20 @@ def _get_conditional_probability(target_factors, proposal_factors, evidence, num
     out = Factor()
 
     """ YOUR CODE HERE """
+    #TODO.1 from the target factors find out the exact topological graph (maybe store it in some nx graph if needed)
+
+    #TODO.2 given evidence, remove those nodes and edges connected with it -> find the new table -> topological graph for this also
+
+    #TODO.2.a for this write some function where given a factor and some particular slice we return only that row ( might have to use assignmentToIndex here)
+
+    #TODO.3 for all the Xf nodes sample it in a topological order ( either throw dice only once or for each node) and using that information compute it recursively
+    #TODO.3a sample only from the proposal distribution and in one such sample step you get the states for each of the nodes from the proposal distribution
+    #TODO.3b get a list of samples after all the iterations
+
+    #TODO.4 from this list of samples(from each iteration) use both the target and the proposal factors to find out the probabilities and create another dict
+
+    #TODO.5 normalize the dict
+
 
     """ END YOUR CODE HERE """
 
