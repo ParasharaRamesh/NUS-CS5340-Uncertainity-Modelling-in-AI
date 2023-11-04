@@ -43,7 +43,12 @@ def construct_graph_from_factors(factors):
     graph = nx.DiGraph()
 
     for node, factor in factors.items():
+        if factor.is_empty():
+            print("Skipping factor")
+            continue
+
         factor_vars = factor.var
+
         graph.add_nodes_from(factor_vars)
         if len(factor_vars) == 1:
             #because no edges can be added from this
@@ -76,6 +81,12 @@ def _sample_step(nodes, proposal_factors):
     samples = {}
 
     """ YOUR CODE HERE: Use np.random.choice """
+
+    #NOTE: If there is evidence the factors which had it earlier will only have those slices now.
+
+    #TODO.1 the topological order is now 0->3->1->4
+
+
 
     #TODO.1 proposal factor key's dont have any meaning here just use the values here!
 
@@ -117,15 +128,19 @@ def _get_conditional_probability(target_factors, proposal_factors, evidence, num
     if len(evidence) > 0:
         for proposal_node, proposal_factor in proposal_factors.items():
             #NOTE: using factor evidence removes the node all together
+
+            #TODO.x this is also wrong for case 0
+
             proposal_factor_after_observing_evidence = factor_evidence(proposal_factor, evidence)
             proposal_factors[proposal_node] = proposal_factor_after_observing_evidence
 
     #1.c Construct the graph from the proposal factors
+    #TODO.x this is wrong
     proposal_graph, proposal_factor_topological_order = construct_graph_from_factors(proposal_factors)
 
     #1.d visualize graphs
     # visualize_graph(target_graph)
-    # visualize_graph(proposal_graph)
+    visualize_graph(proposal_graph)
 
     #2. Get all the samples from proposal distribution
     all_sampled_states = []
