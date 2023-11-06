@@ -113,15 +113,12 @@ def calculate_q_values_from_proposal(proposal_factors, all_sampled_proposal_stat
 
     for proposal_sampled_state in all_sampled_proposal_states:
         q_value = 1
-        for node, factor in proposal_factors.items():
-            '''
-            TODO.x
-            
-            Do assignment_to_index and use that in factor.val to get the prob value & keep multipplying it..
-            '''
-            pass
+        for factor in proposal_factors.values():
+            vars = factor.var
+            var_states = [proposal_sampled_state[var] for var in vars]
+            row_idx = assignment_to_index(var_states,factor.card)
+            q_value *= factor.val[row_idx] # keep multiplying for every factor
         q_values.append(q_value)
-
 
     return q_values
 
