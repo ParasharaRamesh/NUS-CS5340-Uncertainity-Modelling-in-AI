@@ -191,38 +191,34 @@ def _sample_step(nodes, proposal_factors):
         
         Since we are going in topological order this should be quite straightforward
         '''
-        var_and_card = zip(factor.var, factor.card)
+        curr_factor_vars_and_cards = zip(factor.var, factor.card)
 
         previously_sampled_var_state = []
         previously_sampled_card = []
 
-        for var, card in var_and_card:
+        for var, card in curr_factor_vars_and_cards:
             # it was already previously sampled
             if var in samples:
                 previously_sampled_var_state.append(samples[var])
                 previously_sampled_card.append(card)
 
         '''
-        If at all the dependent vars were sampled earlier get that particular slice else just use the factor val directly
+        If at all the dependent vars were sampled earlier get all slices based on curr var's changing cardinality, else just use the factor val directly
         '''
         if len(previously_sampled_var_state) > 0 and len(previously_sampled_card) > 0:
-            #TODO.x will the current var matter in the assignment
-            '''
-            TODO.x
-            row probs will be a list
-            
-            iterate through all possibile cardinality states of the current var:
-                repeat it 
-            
-            '''
+            var_idx = np.where(factor.var == node)[0][0]
+            node_card = factor.card[var_idx]
 
-            # Get the row index based on this index
-            row_idx = assignment_to_index(previously_sampled_var_state + ?, previously_sampled_card + ?)
-
-            # Get the row slice based on this index
-            row_probs = index_to_assignment(row_idx, previously_sampled_card)
+            row_probs = []
+            for var_card_state in range(node_card):
+                # Get the row index based on this index (basically previously_sampled_var_state would all have fixed states, but the current node state is still fluid so we need to consider all the rows based on its changing cardinality)
+                row_idx_where_curr_var_has_card_state = assignment_to_index(previously_sampled_var_state + [node], previously_sampled_card + [node_card])
+                # Get the probability from that row
+                prob_value_from_that_row = index_to_assignment(row_idx_where_curr_var_has_card_state, previously_sampled_card + [node_card])[0]
+                # Add it to the list of probabilities
+                row_probs.append(prob_value_from_that_row)
         else:
-            # in case there was no need to get the row slice ( this will be the case when there is only one node)
+            # in case there was no need to get the row slice (this will be the case when there is only one node)
             row_probs = factor.val
 
         # Sample a state based on the probabilities
