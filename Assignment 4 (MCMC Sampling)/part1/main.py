@@ -34,32 +34,55 @@ def visualize_graph(graph, weighted=False):
     plt.axis('off')
     plt.show()
 
-def construct_graph_from_factors(factors):
+def construct_graph_from_factors(factors, evidence):
     '''
 
     @param factors:
     @return: nx graph & topological order
     '''
+
     graph = nx.DiGraph()
 
+    nodes_to_delete = []
     for node, factor in factors.items():
         if factor.is_empty():
             print("Skipping factor")
             continue
 
-        factor_vars = factor.var
+        is_current_node_observed = node in evidence
+        does_factor_have_evidence_var = len(set(evidence.keys()).intersection(set(factor.var))) > 0
 
-        graph.add_nodes_from(factor_vars)
-        if len(factor_vars) == 1:
-            #because no edges can be added from this
-            continue
+        if is_current_node_observed:
+            #no need for this factor anymore
+            nodes_to_delete.append(node)
         else:
-            last_var = factor_vars[-1]
-            for var in factor_vars[:-1]:
-                graph.add_edge(var, last_var)
+            if does_factor_have_evidence_var:
+                #if this is the case call factor_evidence and update the factor
+                factor_after_observing_evidence = factor_evidence(factor, evidence)
+
+                #update
+                factors[node] = factor_after_observing_evidence
+
+            #potentially new factor
+            potentially_updated_factor = factors[node]
+            is_factor_univariate = len(potentially_updated_factor.var) == 1
+
+            # Add the factors as nodes
+            graph.add_nodes_from(potentially_updated_factor.var)
+
+            #if the factor does not have any evidence
+            if not is_factor_univariate:
+                # add the edges from every var to the last one (e.g. [var1,var2,var3] => (var1,var3), (var2,var3)
+                last_var = potentially_updated_factor.var[-1]
+                for var in potentially_updated_factor.var[:-1]:
+                    graph.add_edge(var, last_var)
+
+    #remove unnecessary factors
+    for node in nodes_to_delete:
+        del factors[node]
 
     topological_order = list(nx.topological_sort(graph))
-    return graph, topological_order
+    return graph, topological_order, factors
 
 
 """ END HELPER FUNCTIONS HERE """
@@ -82,15 +105,13 @@ def _sample_step(nodes, proposal_factors):
 
     """ YOUR CODE HERE: Use np.random.choice """
 
-    #NOTE: If there is evidence the factors which had it earlier will only have those slices now.
-
-    #TODO.1 the topological order is now 0->3->1->4
-
-
-
-    #TODO.1 proposal factor key's dont have any meaning here just use the values here!
-
-
+    #going through the topological order
+    for node in nodes:
+        factor = proposal_factors[node]
+        # Sample a state based on the probabilities
+        states = list(range(len(factor.val)))
+        sampled_state = np.random.choice(states, p=factor.val)
+        samples[node] = sampled_state
 
     """ END YOUR CODE HERE """
 
@@ -121,31 +142,18 @@ def _get_conditional_probability(target_factors, proposal_factors, evidence, num
     out = Factor()
 
     """ YOUR CODE HERE """
-    #1.a Construct the graph from the target factors
-    target_graph, target_factor_topological_order = construct_graph_from_factors(target_factors)
+    #1.a Construct the graph from the proposal factors
+    print("Constructing a proposal graph")
+    proposal_graph, proposal_factor_topological_order, proposal_factors = construct_graph_from_factors(proposal_factors, evidence)
 
-    #1.b Observe the evidence for the proposal factors
-    if len(evidence) > 0:
-        for proposal_node, proposal_factor in proposal_factors.items():
-            #NOTE: using factor evidence removes the node all together
-
-            #TODO.x this is also wrong for case 0
-
-            proposal_factor_after_observing_evidence = factor_evidence(proposal_factor, evidence)
-            proposal_factors[proposal_node] = proposal_factor_after_observing_evidence
-
-    #1.c Construct the graph from the proposal factors
-    #TODO.x this is wrong
-    proposal_graph, proposal_factor_topological_order = construct_graph_from_factors(proposal_factors)
-
-    #1.d visualize graphs
-    # visualize_graph(target_graph)
-    visualize_graph(proposal_graph)
+    #1.b visualize graphs
+    # visualize_graph(proposal_graph)
 
     #2. Get all the samples from proposal distribution
+    print("Going to sample from the proposal distribution")
     all_sampled_states = []
 
-    for iteration in range(num_iterations):
+    for iteration in tqdm(range(num_iterations)):
         state_of_variables_in_proposal_distribution = _sample_step(proposal_factor_topological_order, proposal_factors)
         all_sampled_states.append(state_of_variables_in_proposal_distribution)
 
