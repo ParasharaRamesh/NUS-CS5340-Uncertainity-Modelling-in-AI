@@ -87,16 +87,18 @@ if __name__ == '__main__':
                  card=card,
                  val=[0.6, 0.3, 0.2, 0.7, 0.2, 0.0])
 
-    # This will print the factor table, similar to the docstring above
-    print(phi)
+    # # This will print the factor table, similar to the docstring above
+    # print(phi)
+    #
+    # # This should print 4, since phi.val[4] corresponds to the assignment
+    # # X_1=0, X_5=2.
+    # print(assignment_to_index(np.array([0, 2]), np.array(card)))
+    # print(assignment_to_index([0, 2], card))  # The functions accept a python list too
+    #
+    # # And this will print [0, 2]
+    # print(index_to_assignment(4, card))
+    #
+    # # This will print the entire 6x2 array of assignments
+    # print(index_to_assignment([0, 1, 2, 3, 4, 5], card))
 
-    # This should print 4, since phi.val[4] corresponds to the assignment
-    # X_1=0, X_5=2.
-    print(assignment_to_index(np.array([0, 2]), np.array(card)))
-    print(assignment_to_index([0, 2], card))  # The functions accept a python list too
-
-    # And this will print [0, 2]
-    print(index_to_assignment(4, card))
-
-    # This will print the entire 6x2 array of assignments
-    print(index_to_assignment([0, 1, 2, 3, 4, 5], card))
+    print(phi.get_all_assignments())

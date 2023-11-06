@@ -8,6 +8,8 @@ Student ID: A0285647M
 
 import os
 import json
+from collections import defaultdict
+
 import numpy as np
 import networkx as nx
 from factor_utils import factor_evidence, factor_product, assignment_to_index, index_to_assignment
@@ -42,12 +44,17 @@ def construct_graph_from_factors(factors, evidence):
     '''
 
     graph = nx.DiGraph()
+    var_and_card = dict()
 
     nodes_to_delete = []
     for node, factor in factors.items():
         if factor.is_empty():
             print("Skipping factor")
             continue
+
+        #find the variable and its cardinality
+        idx_in_var = np.where(factor.var == node)[0][0]
+        var_and_card[node] = factor.card[idx_in_var]
 
         is_current_node_observed = node in evidence
         does_factor_have_evidence_var = len(set(evidence.keys()).intersection(set(factor.var))) > 0
@@ -82,7 +89,14 @@ def construct_graph_from_factors(factors, evidence):
         del factors[node]
 
     topological_order = list(nx.topological_sort(graph))
-    return graph, topological_order, factors
+
+    return graph, topological_order, factors, var_and_card
+
+def calculate_p_values_from_target(target_factors, all_sampled_target_states):
+    return []
+
+def calculate_q_values_from_proposal(proposal_factors, all_sampled_proposal_states):
+    return []
 
 
 """ END HELPER FUNCTIONS HERE """
@@ -108,9 +122,40 @@ def _sample_step(nodes, proposal_factors):
     #going through the topological order
     for node in nodes:
         factor = proposal_factors[node]
+
+        '''
+        In case the current factor has multiple variables,
+        then we need to get that particular row which has the slice containing the previously sampled states for its dependent vars.
+        
+        Since we are going in topological order this should be quite straightforward
+        '''
+        var_and_card = zip(factor.var, factor.card)
+
+        previously_sampled_var_state = []
+        previously_sampled_card = []
+
+        for var, card in var_and_card:
+            #it was already previously sampled
+            if var in samples:
+                previously_sampled_var_state.append(samples[var])
+                previously_sampled_card.append(card)
+
+        '''
+        If at all the dependent vars were sampled earlier get that particular slice else just use the factor val directly
+        '''
+        if len(previously_sampled_var_state) > 0 and len(previously_sampled_card) > 0:
+            # Get the row index based on this index
+            row_idx = assignment_to_index(previously_sampled_var_state, previously_sampled_card)
+
+            # Get the row slice based on this index
+            row_probs = index_to_assignment(row_idx, previously_sampled_card)
+        else:
+            # in case there was no need to get the row slice ( this will be the case when there is only one node)
+            row_probs = factor.val
+
         # Sample a state based on the probabilities
-        states = list(range(len(factor.val)))
-        sampled_state = np.random.choice(states, p=factor.val)
+        states = list(range(len(row_probs)))
+        sampled_state = np.random.choice(states, p=row_probs)
         samples[node] = sampled_state
 
     """ END YOUR CODE HERE """
@@ -144,31 +189,64 @@ def _get_conditional_probability(target_factors, proposal_factors, evidence, num
     """ YOUR CODE HERE """
     #1.a Construct the graph from the proposal factors
     print("Constructing a proposal graph")
-    proposal_graph, proposal_factor_topological_order, proposal_factors = construct_graph_from_factors(proposal_factors, evidence)
+    proposal_graph, proposal_factor_topological_order, proposal_factors, var_and_card = construct_graph_from_factors(proposal_factors, evidence)
 
     #1.b visualize graphs
     # visualize_graph(proposal_graph)
 
     #2. Get all the samples from proposal distribution
     print("Going to sample from the proposal distribution")
-    all_sampled_states = []
+    all_sampled_proposal_states = []
 
     for iteration in tqdm(range(num_iterations)):
         state_of_variables_in_proposal_distribution = _sample_step(proposal_factor_topological_order, proposal_factors)
-        all_sampled_states.append(state_of_variables_in_proposal_distribution)
+        all_sampled_proposal_states.append(state_of_variables_in_proposal_distribution)
 
-    #3. Calculate the p , q, r, w values
+    #3. Calculate the p, q values from #num_iterations (TODO)
+    print("Going to find all the p values")
+    all_sampled_target_states = list(map(lambda proposal_state: proposal_state.update(evidence), all_sampled_proposal_states))
+    all_p_values = calculate_p_values_from_target(target_factors, all_sampled_target_states)
 
-    #TODO.2.a for this write some function where given a factor and some particular slice we return only that row ( might have to use assignmentToIndex here)
+    print("Going to find all the q values")
+    all_q_values = calculate_q_values_from_proposal(proposal_factors, all_sampled_proposal_states)
 
-    #TODO.3 for all the Xf nodes sample it in a topological order ( either throw dice only once or for each node) and using that information compute it recursively
-    #TODO.3a sample only from the proposal distribution and in one such sample step you get the states for each of the nodes from the proposal distribution
-    #TODO.3b get a list of samples after all the iterations
+    all_p_values = np.array(all_p_values)
+    all_q_values = np.array(all_q_values)
 
-    #TODO.4 from this list of samples(from each iteration) use both the target and the proposal factors to find out the probabilities and create another dict
+    #4. Calculate r values
+    print("Going to find all the r values")
+    all_r_values = all_p_values/all_q_values
 
-    #TODO.5 normalize the dict
+    #5. Calculate w values
+    print("Going to find all the w values")
+    all_w_values = all_r_values/np.sum(all_r_values)
 
+    #6. Calculate the marginal probability
+    print("Going to find the total probability for every state configuration of the query nodes")
+    all_sampled_states_and_its_corresponding_w_values = zip(all_sampled_proposal_states, all_w_values)
+
+    state_probs = defaultdict(int) # this will return 0 in case a particular configuration is missing
+
+    for sampled_proposal_states, w_value in all_sampled_states_and_its_corresponding_w_values:
+        state_key = tuple(sorted(sampled_proposal_states.items()))
+        if state_key not in state_probs:
+            state_probs[state_key] = w_value
+        else:
+            state_probs[state_key] += w_value
+    print("Finished calculating the probability for each state configuration of the query nodes, now constructing the out factor")
+
+    # 7. Create the out factor
+    out.var = np.array(sorted(all_sampled_proposal_states[0].keys()))
+    out.card = np.array([var_and_card[var] for var in out.var])
+
+    all_var_state_configurations = out.get_all_assignments()
+    out.val = []
+    for var_state_configuration in all_var_state_configurations:
+        #TODO.2 somehow get the correct key from the state_probs
+        prob_of_state_configuration = ?
+        out.val.append(prob_of_state_configuration)
+
+    out.val = np.array(out.val)
 
     """ END YOUR CODE HERE """
 
