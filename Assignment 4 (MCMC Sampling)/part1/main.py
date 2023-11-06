@@ -21,10 +21,12 @@ import matplotlib.pyplot as plt
 PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 INPUT_DIR = os.path.join(DATA_DIR, 'inputs')
-PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
+PREDICTION_DIR = os.path.join(DATA_DIR, 'predictions')
 # PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
 
 """ ADD HELPER FUNCTIONS HERE """
+
+
 def visualize_graph(graph, weighted=False):
     pos = nx.spring_layout(graph)
     nx.draw_networkx(graph, pos=pos, with_labels=True, font_weight='bold',
@@ -35,6 +37,7 @@ def visualize_graph(graph, weighted=False):
         nx.draw_networkx_edge_labels(graph, pos=pos, edge_labels=edge_labels)
     plt.axis('off')
     plt.show()
+
 
 def construct_graph_from_factors(factors, evidence):
     '''
@@ -52,7 +55,7 @@ def construct_graph_from_factors(factors, evidence):
             print("Skipping factor")
             continue
 
-        #find the variable and its cardinality
+        # find the variable and its cardinality
         idx_in_var = np.where(factor.var == node)[0][0]
         var_and_card[node] = factor.card[idx_in_var]
 
@@ -60,31 +63,31 @@ def construct_graph_from_factors(factors, evidence):
         does_factor_have_evidence_var = len(set(evidence.keys()).intersection(set(factor.var))) > 0
 
         if is_current_node_observed:
-            #no need for this factor anymore
+            # no need for this factor anymore
             nodes_to_delete.append(node)
         else:
             if does_factor_have_evidence_var:
-                #if this is the case call factor_evidence and update the factor
+                # if this is the case call factor_evidence and update the factor
                 factor_after_observing_evidence = factor_evidence(factor, evidence)
 
-                #update
+                # update
                 factors[node] = factor_after_observing_evidence
 
-            #potentially new factor
+            # potentially new factor
             potentially_updated_factor = factors[node]
             is_factor_univariate = len(potentially_updated_factor.var) == 1
 
             # Add the factors as nodes
             graph.add_nodes_from(potentially_updated_factor.var)
 
-            #if the factor does not have any evidence
+            # if the factor does not have any evidence
             if not is_factor_univariate:
                 # add the edges from every var to the last one (e.g. [var1,var2,var3] => (var1,var3), (var2,var3)
                 last_var = potentially_updated_factor.var[-1]
                 for var in potentially_updated_factor.var[:-1]:
                     graph.add_edge(var, last_var)
 
-    #remove unnecessary factors
+    # remove unnecessary factors
     for node in nodes_to_delete:
         del factors[node]
 
@@ -92,11 +95,69 @@ def construct_graph_from_factors(factors, evidence):
 
     return graph, topological_order, factors, var_and_card
 
+
 def calculate_p_values_from_target(target_factors, all_sampled_target_states):
+    # TODO.x
     return []
 
+
 def calculate_q_values_from_proposal(proposal_factors, all_sampled_proposal_states):
+    # TODO.x
     return []
+
+
+def calculate_w_values_for_all_samples(all_sampled_proposal_states, proposal_factors, target_factors, evidence):
+    print("Going to find all the p values")
+    all_sampled_target_states = list(
+        map(lambda proposal_state: proposal_state.update(evidence), all_sampled_proposal_states)
+    )
+    all_p_values = calculate_p_values_from_target(target_factors, all_sampled_target_states)
+    print("Going to find all the q values")
+    all_q_values = calculate_q_values_from_proposal(proposal_factors, all_sampled_proposal_states)
+    print("Found all the p & q values, converting both to numpy arrays for easier processing")
+    all_p_values = np.array(all_p_values)
+    all_q_values = np.array(all_q_values)
+    # 4. Calculate r values
+    print("Going to find all the r values")
+    all_r_values = all_p_values / all_q_values
+    # 5. Calculate w values
+    print("Going to find all the w values")
+    all_w_values = all_r_values / np.sum(all_r_values)
+    return all_w_values
+
+
+def get_probs_for_each_query_node_state_configuration(all_sampled_proposal_states, all_w_values):
+    print("Going to find the total probability for every state configuration of the query nodes")
+    all_sampled_states_and_its_corresponding_w_values = zip(all_sampled_proposal_states, all_w_values)
+    state_probs = defaultdict(int)  # this will return 0 in case a particular configuration is missing
+    for sampled_proposal_states, w_value in all_sampled_states_and_its_corresponding_w_values:
+        state_key = tuple(sorted(sampled_proposal_states.items()))
+        if state_key not in state_probs:
+            state_probs[state_key] = w_value
+        else:
+            state_probs[state_key] += w_value
+    print(
+        "Finished calculating the probability for each state configuration of the query nodes, now constructing the out factor")
+    return state_probs
+
+
+def create_out_factor_from_state_probs(all_sampled_proposal_states, out, state_probs, var_and_card):
+    out.var = np.array(sorted(all_sampled_proposal_states[0].keys()))
+    out.card = np.array([var_and_card[var] for var in out.var])
+    all_var_state_configurations = out.get_all_assignments()  # to ensure that we fill the val in the correct order
+    out.val = []
+    for var_state_configuration in all_var_state_configurations:
+        # Construct the key in order to use it to get the value from state_probs since there the key is in the format ((var, state),..)
+        key_to_search_with = []
+        for var, var_state in zip(out.var, var_state_configuration):
+            key_to_search_with.append((var, var_state))
+        key_to_search_with = tuple(key_to_search_with)
+
+        # Get the probability of this state from the state_probs dict
+        prob_of_state_configuration = state_probs[key_to_search_with]
+        out.val.append(prob_of_state_configuration)
+    out.val = np.array(out.val)
+    return out
 
 
 """ END HELPER FUNCTIONS HERE """
@@ -119,7 +180,7 @@ def _sample_step(nodes, proposal_factors):
 
     """ YOUR CODE HERE: Use np.random.choice """
 
-    #going through the topological order
+    # going through the topological order
     for node in nodes:
         factor = proposal_factors[node]
 
@@ -135,7 +196,7 @@ def _sample_step(nodes, proposal_factors):
         previously_sampled_card = []
 
         for var, card in var_and_card:
-            #it was already previously sampled
+            # it was already previously sampled
             if var in samples:
                 previously_sampled_var_state.append(samples[var])
                 previously_sampled_card.append(card)
@@ -187,14 +248,15 @@ def _get_conditional_probability(target_factors, proposal_factors, evidence, num
     out = Factor()
 
     """ YOUR CODE HERE """
-    #1.a Construct the graph from the proposal factors
+    # 1.a Construct the graph from the proposal factors
     print("Constructing a proposal graph")
-    proposal_graph, proposal_factor_topological_order, proposal_factors, var_and_card = construct_graph_from_factors(proposal_factors, evidence)
+    proposal_graph, proposal_factor_topological_order, proposal_factors, var_and_card = construct_graph_from_factors(
+        proposal_factors, evidence)
 
-    #1.b visualize graphs
+    # 1.b visualize graphs
     # visualize_graph(proposal_graph)
 
-    #2. Get all the samples from proposal distribution
+    # 2. Get all the samples from proposal distribution
     print("Going to sample from the proposal distribution")
     all_sampled_proposal_states = []
 
@@ -202,51 +264,15 @@ def _get_conditional_probability(target_factors, proposal_factors, evidence, num
         state_of_variables_in_proposal_distribution = _sample_step(proposal_factor_topological_order, proposal_factors)
         all_sampled_proposal_states.append(state_of_variables_in_proposal_distribution)
 
-    #3. Calculate the p, q values from #num_iterations (TODO)
-    print("Going to find all the p values")
-    all_sampled_target_states = list(map(lambda proposal_state: proposal_state.update(evidence), all_sampled_proposal_states))
-    all_p_values = calculate_p_values_from_target(target_factors, all_sampled_target_states)
+    # 3. Calculate the p, q values from #num_iterations
+    all_w_values = calculate_w_values_for_all_samples(all_sampled_proposal_states, proposal_factors, target_factors,
+                                                      evidence)
 
-    print("Going to find all the q values")
-    all_q_values = calculate_q_values_from_proposal(proposal_factors, all_sampled_proposal_states)
-
-    all_p_values = np.array(all_p_values)
-    all_q_values = np.array(all_q_values)
-
-    #4. Calculate r values
-    print("Going to find all the r values")
-    all_r_values = all_p_values/all_q_values
-
-    #5. Calculate w values
-    print("Going to find all the w values")
-    all_w_values = all_r_values/np.sum(all_r_values)
-
-    #6. Calculate the marginal probability
-    print("Going to find the total probability for every state configuration of the query nodes")
-    all_sampled_states_and_its_corresponding_w_values = zip(all_sampled_proposal_states, all_w_values)
-
-    state_probs = defaultdict(int) # this will return 0 in case a particular configuration is missing
-
-    for sampled_proposal_states, w_value in all_sampled_states_and_its_corresponding_w_values:
-        state_key = tuple(sorted(sampled_proposal_states.items()))
-        if state_key not in state_probs:
-            state_probs[state_key] = w_value
-        else:
-            state_probs[state_key] += w_value
-    print("Finished calculating the probability for each state configuration of the query nodes, now constructing the out factor")
+    # 6. Calculate the marginal probability
+    state_probs = get_probs_for_each_query_node_state_configuration(all_sampled_proposal_states, all_w_values)
 
     # 7. Create the out factor
-    out.var = np.array(sorted(all_sampled_proposal_states[0].keys()))
-    out.card = np.array([var_and_card[var] for var in out.var])
-
-    all_var_state_configurations = out.get_all_assignments()
-    out.val = []
-    for var_state_configuration in all_var_state_configurations:
-        #TODO.2 somehow get the correct key from the state_probs
-        prob_of_state_configuration = ?
-        out.val.append(prob_of_state_configuration)
-
-    out.val = np.array(out.val)
+    out = create_out_factor_from_state_probs(all_sampled_proposal_states, out, state_probs, var_and_card)
 
     """ END YOUR CODE HERE """
 
