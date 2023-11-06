@@ -212,7 +212,7 @@ def _sample_step(nodes, proposal_factors):
             row probs will be a list
             
             iterate through all possibile cardinality states of the current var:
-                r
+                repeat it 
             
             '''
 
