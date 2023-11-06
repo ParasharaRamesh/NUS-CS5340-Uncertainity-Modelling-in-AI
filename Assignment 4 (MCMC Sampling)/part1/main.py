@@ -142,6 +142,7 @@ def get_probs_for_each_query_node_state_configuration(all_sampled_proposal_state
 
 
 def create_out_factor_from_state_probs(all_sampled_proposal_states, out, state_probs, var_and_card):
+    #TODO.x dont really need all_sampled_proposal_states
     out.var = np.array(sorted(all_sampled_proposal_states[0].keys()))
     out.card = np.array([var_and_card[var] for var in out.var])
     all_var_state_configurations = out.get_all_assignments()  # to ensure that we fill the val in the correct order
@@ -205,8 +206,18 @@ def _sample_step(nodes, proposal_factors):
         If at all the dependent vars were sampled earlier get that particular slice else just use the factor val directly
         '''
         if len(previously_sampled_var_state) > 0 and len(previously_sampled_card) > 0:
+            #TODO.x will the current var matter in the assignment
+            '''
+            TODO.x
+            row probs will be a list
+            
+            iterate through all possibile cardinality states of the current var:
+                r
+            
+            '''
+
             # Get the row index based on this index
-            row_idx = assignment_to_index(previously_sampled_var_state, previously_sampled_card)
+            row_idx = assignment_to_index(previously_sampled_var_state + ?, previously_sampled_card + ?)
 
             # Get the row slice based on this index
             row_probs = index_to_assignment(row_idx, previously_sampled_card)

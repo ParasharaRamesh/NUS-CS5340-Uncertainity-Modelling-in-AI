@@ -96,7 +96,7 @@ if __name__ == '__main__':
     # print(assignment_to_index([0, 2], card))  # The functions accept a python list too
     #
     # # And this will print [0, 2]
-    # print(index_to_assignment(4, card))
+    print(index_to_assignment(4, card))
     #
     # # This will print the entire 6x2 array of assignments
     # print(index_to_assignment([0, 1, 2, 3, 4, 5], card))
