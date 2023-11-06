@@ -107,7 +107,7 @@ def calculate_p_values_from_target(target_factors, all_sampled_target_states):
 
     for sampled_state in tqdm(all_sampled_target_states):
         p_value = 1
-        for factor in tqdm(target_factors.values()):
+        for factor in target_factors.values():
             vars = factor.var
             var_states = [sampled_state[var] for var in vars]
             row_idx = assignment_to_index(var_states,factor.card)
@@ -129,7 +129,7 @@ def calculate_q_values_from_proposal(proposal_factors, all_sampled_proposal_stat
 
     for proposal_sampled_state in tqdm(all_sampled_proposal_states):
         q_value = 1
-        for factor in tqdm(proposal_factors.values()):
+        for factor in proposal_factors.values():
             vars = factor.var
             var_states = [proposal_sampled_state[var] for var in vars]
             row_idx = assignment_to_index(var_states,factor.card)
