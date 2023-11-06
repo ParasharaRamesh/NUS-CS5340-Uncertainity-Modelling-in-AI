@@ -105,11 +105,11 @@ def calculate_p_values_from_target(target_factors, all_sampled_target_states):
     '''
     p_values = []
 
-    for proposal_sampled_state in all_sampled_target_states:
+    for sampled_state in tqdm(all_sampled_target_states):
         p_value = 1
-        for factor in target_factors.values():
+        for factor in tqdm(target_factors.values()):
             vars = factor.var
-            var_states = [proposal_sampled_state[var] for var in vars]
+            var_states = [sampled_state[var] for var in vars]
             row_idx = assignment_to_index(var_states,factor.card)
             p_value *= factor.val[row_idx] # keep multiplying for every factor
         p_values.append(p_value)
@@ -127,9 +127,9 @@ def calculate_q_values_from_proposal(proposal_factors, all_sampled_proposal_stat
     '''
     q_values = []
 
-    for proposal_sampled_state in all_sampled_proposal_states:
+    for proposal_sampled_state in tqdm(all_sampled_proposal_states):
         q_value = 1
-        for factor in proposal_factors.values():
+        for factor in tqdm(proposal_factors.values()):
             vars = factor.var
             var_states = [proposal_sampled_state[var] for var in vars]
             row_idx = assignment_to_index(var_states,factor.card)
@@ -140,10 +140,15 @@ def calculate_q_values_from_proposal(proposal_factors, all_sampled_proposal_stat
 
 
 def calculate_w_values_for_all_samples(all_sampled_proposal_states, proposal_factors, target_factors, evidence):
+    all_sampled_target_states = []
+
+    #Update with evidence
+    for proposal_state in all_sampled_proposal_states:
+        proposal_state_copy = dict(proposal_state)
+        proposal_state_copy.update(evidence)
+        all_sampled_target_states.append(proposal_state_copy)
+
     print("Going to find all the p values")
-    all_sampled_target_states = list(
-        map(lambda proposal_state: proposal_state.update(evidence), all_sampled_proposal_states)
-    )
     all_p_values = calculate_p_values_from_target(target_factors, all_sampled_target_states)
     print("Going to find all the q values")
     all_q_values = calculate_q_values_from_proposal(proposal_factors, all_sampled_proposal_states)
