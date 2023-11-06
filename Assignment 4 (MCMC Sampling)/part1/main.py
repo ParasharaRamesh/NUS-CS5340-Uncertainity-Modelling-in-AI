@@ -141,9 +141,9 @@ def get_probs_for_each_query_node_state_configuration(all_sampled_proposal_state
     return state_probs
 
 
-def create_out_factor_from_state_probs(all_sampled_proposal_states, out, state_probs, var_and_card):
-    #TODO.x dont really need all_sampled_proposal_states
-    out.var = np.array(sorted(all_sampled_proposal_states[0].keys()))
+def create_out_factor_from_state_probs(out, state_probs, var_and_card):
+    state_configuration_key = list(state_probs.keys())[0]  # this is a tuple of tuples ((var_i, var_state_i),..)
+    out.var = np.array([item[0] for item in state_configuration_key])
     out.card = np.array([var_and_card[var] for var in out.var])
     all_var_state_configurations = out.get_all_assignments()  # to ensure that we fill the val in the correct order
     out.val = []
@@ -212,9 +212,11 @@ def _sample_step(nodes, proposal_factors):
             row_probs = []
             for var_card_state in range(node_card):
                 # Get the row index based on this index (basically previously_sampled_var_state would all have fixed states, but the current node state is still fluid so we need to consider all the rows based on its changing cardinality)
-                row_idx_where_curr_var_has_card_state = assignment_to_index(previously_sampled_var_state + [node], previously_sampled_card + [node_card])
+                row_idx_where_curr_var_has_card_state = assignment_to_index(previously_sampled_var_state + [node],
+                                                                            previously_sampled_card + [node_card])
                 # Get the probability from that row
-                prob_value_from_that_row = index_to_assignment(row_idx_where_curr_var_has_card_state, previously_sampled_card + [node_card])[0]
+                prob_value_from_that_row = \
+                index_to_assignment(row_idx_where_curr_var_has_card_state, previously_sampled_card + [node_card])[0]
                 # Add it to the list of probabilities
                 row_probs.append(prob_value_from_that_row)
         else:
@@ -279,7 +281,7 @@ def _get_conditional_probability(target_factors, proposal_factors, evidence, num
     state_probs = get_probs_for_each_query_node_state_configuration(all_sampled_proposal_states, all_w_values)
 
     # 7. Create the out factor
-    out = create_out_factor_from_state_probs(all_sampled_proposal_states, out, state_probs, var_and_card)
+    out = create_out_factor_from_state_probs(out, state_probs, var_and_card)
 
     """ END YOUR CODE HERE """
 
