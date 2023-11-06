@@ -97,8 +97,24 @@ def construct_graph_from_factors(factors, evidence):
 
 
 def calculate_p_values_from_target(target_factors, all_sampled_target_states):
-    # TODO.x
-    return []
+    '''
+
+    @param target_factors: dictionary of target factors
+    @param all_sampled_target_states: list of proposal variable states [{var1: state1,..},..]
+    @return:
+    '''
+    p_values = []
+
+    for proposal_sampled_state in all_sampled_target_states:
+        p_value = 1
+        for factor in target_factors.values():
+            vars = factor.var
+            var_states = [proposal_sampled_state[var] for var in vars]
+            row_idx = assignment_to_index(var_states,factor.card)
+            p_value *= factor.val[row_idx] # keep multiplying for every factor
+        p_values.append(p_value)
+
+    return p_values
 
 
 def calculate_q_values_from_proposal(proposal_factors, all_sampled_proposal_states):
