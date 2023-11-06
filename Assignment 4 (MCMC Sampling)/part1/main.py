@@ -102,8 +102,28 @@ def calculate_p_values_from_target(target_factors, all_sampled_target_states):
 
 
 def calculate_q_values_from_proposal(proposal_factors, all_sampled_proposal_states):
-    # TODO.x
-    return []
+    '''
+
+
+    @param proposal_factors: dictionary of proposal factors
+    @param all_sampled_proposal_states: list of proposal variable states [{var1: state1,..},..]
+    @return:
+    '''
+    q_values = []
+
+    for proposal_sampled_state in all_sampled_proposal_states:
+        q_value = 1
+        for node, factor in proposal_factors.items():
+            '''
+            TODO.x
+            
+            Do assignment_to_index and use that in factor.val to get the prob value & keep multipplying it..
+            '''
+            pass
+        q_values.append(q_value)
+
+
+    return q_values
 
 
 def calculate_w_values_for_all_samples(all_sampled_proposal_states, proposal_factors, target_factors, evidence):
@@ -215,8 +235,8 @@ def _sample_step(nodes, proposal_factors):
                 row_idx_where_curr_var_has_card_state = assignment_to_index(previously_sampled_var_state + [node],
                                                                             previously_sampled_card + [node_card])
                 # Get the probability from that row
-                prob_value_from_that_row = \
-                index_to_assignment(row_idx_where_curr_var_has_card_state, previously_sampled_card + [node_card])[0]
+                prob_value_from_that_row = factor.val[row_idx_where_curr_var_has_card_state]
+
                 # Add it to the list of probabilities
                 row_probs.append(prob_value_from_that_row)
         else:
