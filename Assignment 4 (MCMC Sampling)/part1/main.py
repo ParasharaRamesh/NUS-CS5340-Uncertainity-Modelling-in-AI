@@ -231,12 +231,14 @@ def _sample_step(nodes, proposal_factors):
         '''
         curr_factor_vars_and_cards = zip(factor.var, factor.card)
 
+        previously_sampled_var = []
         previously_sampled_var_state = []
         previously_sampled_card = []
 
         for var, card in curr_factor_vars_and_cards:
             # it was already previously sampled
             if var in samples:
+                previously_sampled_var.append(var)
                 previously_sampled_var_state.append(samples[var])
                 previously_sampled_card.append(card)
 
@@ -244,26 +246,16 @@ def _sample_step(nodes, proposal_factors):
         If at all the dependent vars were sampled earlier get all slices based on curr var's changing cardinality, else just use the factor val directly
         '''
         if len(previously_sampled_var_state) > 0 and len(previously_sampled_card) > 0:
-            var_idx = np.where(factor.var == node)[0][0]
-            node_card = factor.card[var_idx]
-
-            row_probs = []
-            for var_card_state in range(node_card):
-                # Get the row index based on this index (basically previously_sampled_var_state would all have fixed states, but the current node state is still fluid so we need to consider all the rows based on its changing cardinality)
-                row_idx_where_curr_var_has_card_state = assignment_to_index(previously_sampled_var_state + [node],
-                                                                            previously_sampled_card + [node_card])
-                # Get the probability from that row
-                prob_value_from_that_row = factor.val[row_idx_where_curr_var_has_card_state]
-
-                # Add it to the list of probabilities
-                row_probs.append(prob_value_from_that_row)
+            evidence_from_previously_sampled = {var: state for var, state in zip(previously_sampled_var, previously_sampled_var_state)}
+            curr_node_factor_after_evidence = factor_evidence(factor, evidence_from_previously_sampled)
+            row_probs = curr_node_factor_after_evidence.val
         else:
             # in case there was no need to get the row slice (this will be the case when there is only one node)
             row_probs = factor.val
 
         # Sample a state based on the probabilities
         states = list(range(len(row_probs)))
-        sampled_state = np.random.choice(states, p=row_probs)
+        sampled_state = np.random.choice(states, p=row_probs) #dont sum to 1
         samples[node] = sampled_state
 
     """ END YOUR CODE HERE """
