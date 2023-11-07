@@ -248,7 +248,7 @@ def _sample_step(nodes, proposal_factors):
 
         # Sample a state based on the probabilities
         states = list(range(len(row_probs)))
-        sampled_state = np.random.choice(states, p=row_probs) #dont sum to 1
+        sampled_state = np.random.choice(states, p=row_probs)
         samples[node] = sampled_state
 
     """ END YOUR CODE HERE """

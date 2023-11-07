@@ -118,11 +118,19 @@ def _sample_step(nodes, factors, in_samples):
 
     """ YOUR CODE HERE """
     for node in nodes:
-        #TODO.x
+        '''
+        For current node ,all of the nodes before would have the updated value, but the nodes which comes after needs to be updated
+        '''
         factor = factors[node]
         other_nodes = list(set(nodes).difference(set([node])))
+        evidence_based_on_other_nodes = {node: samples[node] for node in other_nodes}
+        node_row_factor = factor_evidence(factor, evidence_based_on_other_nodes)
+        node_row_probs = node_row_factor.val
 
-
+        # Sample a state based on the probabilities
+        states = list(range(len(node_row_probs)))
+        sampled_state = np.random.choice(states, p=node_row_probs)
+        samples[node] = sampled_state
 
     """ END YOUR CODE HERE """
 
