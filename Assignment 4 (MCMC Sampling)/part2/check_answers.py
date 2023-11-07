@@ -29,10 +29,14 @@ def check_answers(case: int, tolerance_decimal: int = 1):
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--case', type=int, required=True)
-    args = parser.parse_args()
-    check_answers(case=args.case)
+    # parser = argparse.ArgumentParser()
+    # parser.add_argument('--case', type=int, required=True)
+    # args = parser.parse_args()
+    # check_answers(case=args.case)
+    for case in range(1,5):
+        print(f"Checking case {case}")
+        check_answers(case)
+        print(f"Done case {case}")
 
 
 if __name__ == '__main__':

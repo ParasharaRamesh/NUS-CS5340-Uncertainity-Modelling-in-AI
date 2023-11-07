@@ -67,13 +67,13 @@ def calculate_conditional_prob(actual_sampled_states, var_and_card, factor):
     for sampled_state in actual_sampled_states:
         state_key = tuple(sorted(sampled_state.items()))
         if state_key not in state_counts:
-            state_counts[state_key] = 0
+            state_counts[state_key] = 1
         else:
             state_counts[state_key] += 1
 
     #calculate state_probs
     normalizer = sum(state_counts.values())
-    state_probs = {state: count/normalizer for state,count in state_counts.items()}
+    state_probs = defaultdict(int, {state: count/normalizer for state,count in state_counts.items()})
 
     #from state_probs create a factor
     factor.var = np.array(sorted(var_and_card.keys()))
@@ -125,7 +125,9 @@ def _sample_step(nodes, factors, in_samples):
         other_nodes = list(set(nodes).difference(set([node])))
         evidence_based_on_other_nodes = {node: samples[node] for node in other_nodes}
         node_row_factor = factor_evidence(factor, evidence_based_on_other_nodes)
-        node_row_probs = node_row_factor.val
+
+        #normalize it explicitly
+        node_row_probs = node_row_factor.val / np.sum(node_row_factor.val)
 
         # Sample a state based on the probabilities
         states = list(range(len(node_row_probs)))
