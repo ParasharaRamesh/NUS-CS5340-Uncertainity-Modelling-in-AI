@@ -10,20 +10,52 @@ import copy
 import os
 import json
 import numpy as np
+import networkx as nx
 from tqdm import tqdm
 from collections import Counter
 from argparse import ArgumentParser
 from factor_utils import factor_evidence, factor_marginalize, assignment_to_index, index_to_assignment
 from factor import Factor
+import matplotlib.pyplot as plt
 
 PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 INPUT_DIR = os.path.join(DATA_DIR, 'inputs')
-# PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
-PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
+PREDICTION_DIR = os.path.join(DATA_DIR, 'predictions')
 GROUND_TRUTH_DIR = os.path.join(DATA_DIR, 'ground-truth')
 
 """ HELPER FUNCTIONS HERE """
+def visualize_graph(graph, weighted=False):
+    pos = nx.spring_layout(graph)
+    nx.draw_networkx(graph, pos=pos, with_labels=True, font_weight='bold',
+                     node_size=1000, arrowsize=20)
+    # only for weighted
+    if weighted:
+        edge_labels = {(u, v): d['weight'] for u, v, d in graph.edges(data=True)}
+        nx.draw_networkx_edge_labels(graph, pos=pos, edge_labels=edge_labels)
+    plt.axis('off')
+    plt.show()
+
+
+def construct_factor_graph(nodes, edges):
+    graph = nx.DiGraph()
+    graph.add_nodes_from(nodes)
+    graph.add_edges_from(edges)
+    return graph
+
+def markov_blanket(graph, node):
+    parents = list(graph.predecessors(node))
+    children = list(graph.successors(node))
+    co_parents = []
+
+    for child in children:
+        co_parents.extend(list(graph.predecessors(child)))
+
+    mb = parents + children + co_parents + [node]
+
+    # Remove duplicates and ensures uniqueness
+    mb = list(set(mb))
+    return mb
 
 """ END HELPER FUNCTIONS HERE"""
 
@@ -74,6 +106,32 @@ def _get_conditional_probability(nodes, edges, factors, evidence, initial_sample
     conditional_prob = Factor()
 
     """ YOUR CODE HERE """
+    # 1.a Construct the graph
+    print("Constructing factor graph & observing evidence")
+    factor_graph = construct_factor_graph(nodes, edges)
+
+    # 1.b visualize graphs
+    # visualize_graph(factor_graph)
+
+    #2. Observe the evidence for all the factors & marginalize away everything not in markov blanket
+    for node, factor in factors.items():
+        #observe evidence
+        observed_factor = factor_evidence(factor, evidence)
+
+        #find markov blanket
+        markov_blanket_nodes = markov_blanket(factor_graph, node)
+
+        #marginalize away everything not in the markov blanket nodes
+        other_nodes = list(set(nodes).difference(set(markov_blanket_nodes)))
+        marginalized_factor = factor_marginalize(observed_factor, other_nodes)
+
+        #normalize
+        marginalized_factor.val = marginalized_factor.val / np.sum(marginalized_factor.val)
+
+        #update factors
+        factors[node] = marginalized_factor
+
+    #3. Do gibbs sampling
 
     """ END YOUR CODE HERE """
 

@@ -22,7 +22,6 @@ PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 INPUT_DIR = os.path.join(DATA_DIR, 'inputs')
 PREDICTION_DIR = os.path.join(DATA_DIR, 'predictions')
-# PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
 
 """ ADD HELPER FUNCTIONS HERE """
 
@@ -40,12 +39,6 @@ def visualize_graph(graph, weighted=False):
 
 
 def construct_graph_from_factors(factors, evidence):
-    '''
-
-    @param factors:
-    @return: nx graph & topological order
-    '''
-
     graph = nx.DiGraph()
     var_and_card = dict()
 
