@@ -12,7 +12,7 @@ import json
 import numpy as np
 import networkx as nx
 from tqdm import tqdm
-from collections import Counter
+from collections import Counter, defaultdict
 from argparse import ArgumentParser
 from factor_utils import factor_evidence, factor_marginalize, assignment_to_index, index_to_assignment
 from factor import Factor
@@ -25,6 +25,8 @@ PREDICTION_DIR = os.path.join(DATA_DIR, 'predictions')
 GROUND_TRUTH_DIR = os.path.join(DATA_DIR, 'ground-truth')
 
 """ HELPER FUNCTIONS HERE """
+
+
 def visualize_graph(graph, weighted=False):
     pos = nx.spring_layout(graph)
     nx.draw_networkx(graph, pos=pos, with_labels=True, font_weight='bold',
@@ -43,6 +45,7 @@ def construct_factor_graph(nodes, edges):
     graph.add_edges_from(edges)
     return graph
 
+
 def markov_blanket(graph, node):
     parents = list(graph.predecessors(node))
     children = list(graph.successors(node))
@@ -56,6 +59,45 @@ def markov_blanket(graph, node):
     # Remove duplicates and ensures uniqueness
     mb = list(set(mb))
     return mb
+
+
+def calculate_conditional_prob(actual_sampled_states, var_and_card, factor):
+    #count no of times each state occurs
+    state_counts = defaultdict(int)
+    for sampled_state in actual_sampled_states:
+        state_key = tuple(sorted(sampled_state.items()))
+        if state_key not in state_counts:
+            state_counts[state_key] = 0
+        else:
+            state_counts[state_key] += 1
+
+    #calculate state_probs
+    normalizer = sum(state_counts.values())
+    state_probs = {state: count/normalizer for state,count in state_counts.items()}
+
+    #from state_probs create a factor
+    factor.var = np.array(sorted(var_and_card.keys()))
+    factor.card = np.array([var_and_card[var] for var in factor.var])
+
+    #now come up with the vals based on each of the assignment
+    all_var_state_configurations = factor.get_all_assignments()  # to ensure that we fill the val in the correct order
+    factor.val = []
+    for var_state_configuration in all_var_state_configurations:
+        # Construct the key in order to use it to get the value from state_probs since there the key is in the format ((var, state),..)
+        key_to_search_with = []
+        for var, var_state in zip(factor.var, var_state_configuration):
+            key_to_search_with.append((var, var_state))
+        key_to_search_with = tuple(key_to_search_with)
+
+        # Get the probability of this state from the state_probs dict
+        prob_of_state_configuration = state_probs[key_to_search_with]
+        factor.val.append(prob_of_state_configuration)
+
+    #make it into a np array for consistency sake
+    factor.val = np.array(factor.val)
+
+    return factor
+
 
 """ END HELPER FUNCTIONS HERE"""
 
@@ -75,6 +117,12 @@ def _sample_step(nodes, factors, in_samples):
     samples = copy.deepcopy(in_samples)
 
     """ YOUR CODE HERE """
+    for node in nodes:
+        #TODO.x
+        factor = factors[node]
+        other_nodes = list(set(nodes).difference(set([node])))
+
+
 
     """ END YOUR CODE HERE """
 
@@ -113,25 +161,52 @@ def _get_conditional_probability(nodes, edges, factors, evidence, initial_sample
     # 1.b visualize graphs
     # visualize_graph(factor_graph)
 
-    #2. Observe the evidence for all the factors & marginalize away everything not in markov blanket
+    var_and_card = {node: None for node in nodes}
+
+    # 2. Observe the evidence for all the factors & marginalize away everything not in markov blanket
     for node, factor in factors.items():
-        #observe evidence
+        # find the variable and its cardinality
+        idx_in_var = np.where(factor.var == node)[0][0]
+        var_and_card[node] = factor.card[idx_in_var]
+
+        # observe evidence
         observed_factor = factor_evidence(factor, evidence)
 
-        #find markov blanket
+        # find markov blanket
         markov_blanket_nodes = markov_blanket(factor_graph, node)
 
-        #marginalize away everything not in the markov blanket nodes
+        # marginalize away everything not in the markov blanket nodes
         other_nodes = list(set(nodes).difference(set(markov_blanket_nodes)))
         marginalized_factor = factor_marginalize(observed_factor, other_nodes)
 
-        #normalize
+        # normalize
         marginalized_factor.val = marginalized_factor.val / np.sum(marginalized_factor.val)
 
-        #update factors
+        # update factors
         factors[node] = marginalized_factor
 
-    #3. Do gibbs sampling
+    # 3. Do gibbs sampling
+    burn_in_sampled_states = []
+    actual_sampled_states = []
+
+    in_samples = {node: 0 for node in nodes}
+
+    for t in tqdm(range(num_burn_in + num_iterations)):  # for time t from [0,burn_in+num_iterations-1]
+        if t == num_burn_in:
+            print("Just finished the burn_in period! Now starting actual sampling")
+
+        # Sample it
+        in_samples = _sample_step(nodes, factors, in_samples)
+
+        if t < num_burn_in:
+            # keep collecting in burn_insamples in another array
+            burn_in_sampled_states.append(in_samples)
+        else:
+            # keep collecting in burn_insamples in another array
+            actual_sampled_states.append(in_samples)
+
+    #4. based on the actual_sampled_states just count the no of times that state occurs and create the output factor
+    conditional_prob = calculate_conditional_prob(actual_sampled_states, var_and_card, conditional_prob)
 
     """ END YOUR CODE HERE """
 
