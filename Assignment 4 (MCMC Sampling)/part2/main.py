@@ -171,12 +171,20 @@ def _get_conditional_probability(nodes, edges, factors, evidence, initial_sample
     # 1.b visualize graphs
     # visualize_graph(factor_graph)
 
-    var_and_card = {node: None for node in nodes}
+    var_and_card = dict()
+
+    nodes_to_delete = []
 
     # 2. Observe the evidence for all the factors & marginalize away everything not in markov blanket
     for node, factor in factors.items():
         # find the variable and its cardinality
         idx_in_var = np.where(factor.var == node)[0][0]
+
+        if node in evidence:
+            # here we are skipping and marking for deletion
+            nodes_to_delete.append(node)
+            continue
+
         var_and_card[node] = factor.card[idx_in_var]
 
         # observe evidence
@@ -194,6 +202,12 @@ def _get_conditional_probability(nodes, edges, factors, evidence, initial_sample
 
         # update factors
         factors[node] = marginalized_factor
+
+    #2.a delete the nodes which were marked for deletion
+    for del_node in nodes_to_delete:
+        print(f"Deleted node {del_node} as it is observed")
+        del factors[del_node]
+        nodes = nodes[nodes != del_node]
 
     # 3. Do gibbs sampling
     burn_in_sampled_states = []

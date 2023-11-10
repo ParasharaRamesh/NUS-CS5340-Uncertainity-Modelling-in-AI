@@ -7,7 +7,7 @@ from factor import Factor
 PROJECT_DIR = os.path.abspath(os.path.dirname(__file__))
 DATA_DIR = os.path.join(PROJECT_DIR, 'data')
 ANSWER_DIR = os.path.join(DATA_DIR, 'ground-truth')
-PREDICTION_DIR = os.path.join(DATA_DIR, 'ta_predictions')
+PREDICTION_DIR = os.path.join(DATA_DIR, 'predictions')
 
 
 def parse_json(json_file: str):
@@ -37,6 +37,7 @@ def main():
         print(f"Checking case {case}")
         check_answers(case)
         print(f"Done case {case}")
+
 
 
 if __name__ == '__main__':
